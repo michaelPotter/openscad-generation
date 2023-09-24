@@ -1,49 +1,52 @@
 'use strict';
 
-type vectorTransform = (v: V3) => Geometry3D
-type booleanTransform = (g:Geometry3D|Geometry3D[]) => Geometry3D
-
-interface Geometry3D {
-	getCode: () => string[];
-	getSize: () => V3;
-
-	translate: vectorTransform;
-	rotate: vectorTransform;
-	mirror: vectorTransform;
-
-	union: booleanTransform;
-	difference: booleanTransform;
-	intersection: booleanTransform;
-
-	highlight : () => Geometry3D;
-
-	up    : (n: number) => Geometry3D;
-	down  : (n: number) => Geometry3D;
-	left  : (n: number) => Geometry3D;
-	right : (n: number) => Geometry3D;
-	fwd   : (n: number) => Geometry3D;
-	back  : (n: number) => Geometry3D;
-
-	serialize: () => string;
-}
-
 type V3 = [number, number, number];
 type V2 = [number, number];
 type Path = V2[];
 
-class BaseGeometry3D implements Geometry3D {
+type vectorTransform<G extends V2|V3> = (v: V2|V3) => Geometry<G>
+type booleanTransform<G extends V2|V3> = (g:Geometry<G>|Geometry<G>[]) => Geometry<G>
+
+interface Geometry<G extends V2|V3> {
+	getCode: () => string[];
+	getSize: () => V3;
+
+	translate: vectorTransform<G>;
+	rotate:    vectorTransform<G>;
+	mirror:    vectorTransform<G>;
+
+	union:        booleanTransform<G>;
+	difference:   booleanTransform<G>;
+	intersection: booleanTransform<G>;
+
+	highlight : () => Geometry<G>;
+
+	up    : (n: number) => Geometry<G>;
+	down  : (n: number) => Geometry<G>;
+	left  : (n: number) => Geometry<G>;
+	right : (n: number) => Geometry<G>;
+	fwd   : (n: number) => Geometry<G>;
+	back  : (n: number) => Geometry<G>;
+
+	serialize: () => string;
+}
+
+type Geometry2D = Geometry<V2>
+type Geometry3D = Geometry<V3>
+
+class BaseGeometry<G extends V2|V3> implements Geometry<G> {
 	getCode() { return [""]; }
 	getSize(): V3 { return [0, 0, 0]; }
 
-	translate = vectorTransformCurryable("translate")(this);
-	rotate = vectorTransformCurryable("rotate")(this);
-	mirror = vectorTransformCurryable("mirror")(this);
+	translate: vectorTransform<G> = vectorTransformCurryable("translate")(this);
+	rotate   : vectorTransform<G> = vectorTransformCurryable("rotate")(this);
+	mirror   : vectorTransform<G> = vectorTransformCurryable("mirror")(this);
 
-	union:        booleanTransform = (g) => booleanTransformCurryable("union")([ this, ...ensureGeometryList(g) ]);
-	difference:   booleanTransform = (g) => booleanTransformCurryable("difference")([this, ...ensureGeometryList(g)]);
-	intersection: booleanTransform = (g) => booleanTransformCurryable("intersection")([this, ...ensureGeometryList(g)]);
+	union:        booleanTransform<G> = (g) => booleanTransformCurryable("union")([ this, ...ensureGeometryList(g) ]);
+	difference:   booleanTransform<G> = (g) => booleanTransformCurryable("difference")([this, ...ensureGeometryList(g)]);
+	intersection: booleanTransform<G> = (g) => booleanTransformCurryable("intersection")([this, ...ensureGeometryList(g)]);
 
-	highlight: () => Geometry3D = () => newHighlight(this);
+	highlight: () => Geometry<G> = () => newHighlight(this);
 
 	up    = (n: number) => this.translate([0,  0,  n]);
 	down  = (n: number) => this.translate([0,  0,  -n]);
@@ -59,10 +62,16 @@ class BaseGeometry3D implements Geometry3D {
 		// this.getSize = opts?.getSize ?? this.getSize;
 	}
 }
+class BaseGeometry3D extends BaseGeometry<V3> {
+}
+class BaseGeometry2D extends BaseGeometry<V2> {
+}
 
-class ParentGeometry extends BaseGeometry3D {
-	children: Geometry3D[];
-	constructor(children: Geometry3D|Geometry3D[]) {
+// TODO think this through some more, can we have it both ways?
+// Is there a way to make G be V2 if it only contains 2D children, but 3D if it contains any 3D children??
+class ParentGeometry<G extends V2|V3> extends BaseGeometry<G> {
+	children: Geometry<G>[];
+	constructor(children: Geometry<G>|Geometry<G>[]) {
 		super();
 		this.children = ensureGeometryList(children);
 	}
@@ -173,8 +182,51 @@ function importFile(path: string) {
 //                            2D GEOMETRY                             //
 ////////////////////////////////////////////////////////////////////////
 
-// class Square extends Geometry2D {
-// }
+type SquareOpts = {center:boolean};
+class Square extends BaseGeometry2D implements Geometry2D {
+	size: V2;
+	opts: SquareOpts;
+	constructor(size: V2, opts = {center: false}) {
+		super();
+		this.size = size;
+		this.opts = opts;
+	}
+	getCode() {
+		return [`square([${V2toString(this.size)}], center=${this.opts.center});`];
+	}
+}
+function square(size: V2, opts?: SquareOpts): Geometry2D {
+	return new Square(size, opts);
+}
+
+type CircleOpts = {d?:number, r?:number, fn?:number};
+class Circle extends BaseGeometry2D implements Geometry2D {
+	params: Required<CircleOpts>;
+	constructor(opts: CircleOpts) {
+		super();
+		let r: number, d: number;
+		if (opts.r) {
+			d = opts.r * 2;
+			r = opts.r;
+		} else if (opts.d) {
+			r = opts.d / 2;
+			d = opts.d;
+		} else {
+			throw new Error("A circle requires either a d or r; none given");
+		}
+		this.params = {
+			d,
+			r,
+			fn: opts.fn ?? 0,
+		}
+	}
+	getCode() {
+		return [`circle(d=${this.params.d}, $fn=${this.params.fn});`];
+	}
+}
+function circle(opts: CircleOpts): Geometry2D {
+	return new Circle(opts);
+}
 
 ////////////////////////////////////////////////////////////////////////
 //                               PATHS                                //
@@ -184,10 +236,10 @@ function importFile(path: string) {
 //                             TRANSFORMS                             //
 ////////////////////////////////////////////////////////////////////////
 
-class VectorTransform<V extends V2|V3> extends ParentGeometry {
+class VectorTransform<V extends V2|V3, G extends V2|V3> extends ParentGeometry<G> {
 	transform: string;
 	v: V;
-	constructor(transform: string, v: V, g: Geometry3D|Geometry3D[]) {
+	constructor(transform: string, v: V, g: Geometry<G>|Geometry<G>[]) {
 		super(g);
 		this.transform = transform;
 		this.v = v;
@@ -201,17 +253,17 @@ class VectorTransform<V extends V2|V3> extends ParentGeometry {
 
 const vectorTransformCurryable =
 	(t: string) =>
-		(g: Geometry3D|Geometry3D[]) =>
-			(v: V2|V3): Geometry3D =>
+		<G extends V2|V3>(g: Geometry<G>|Geometry<G>[]) =>
+			(v: V2|V3): Geometry<G> =>
 				new VectorTransform(t, v, g)
-const basicTransform = (t: string) => (v: V2|V3, g: Geometry3D|Geometry3D[]): Geometry3D => vectorTransformCurryable(t)(g)(v);
+const basicTransform = (t: string) => <G extends V2|V3>(v: V2|V3, g: Geometry<G>|Geometry<G>[]): Geometry<G> => vectorTransformCurryable(t)(g)(v);
 const translate = basicTransform("translate");
 const rotate = basicTransform("rotate");
 const mirror = basicTransform("mirror");
 
-class BooleanTransform extends ParentGeometry {
+class BooleanTransform<G extends V2|V3> extends ParentGeometry<G> {
 	t: string;
-	constructor(t: string, g: Geometry3D[]) {
+	constructor(t: string, g: Geometry<G>[]) {
 		super(g);
 		this.t = t;
 	}
@@ -229,8 +281,8 @@ const union = booleanTransformCurryable("union");
 const difference = booleanTransformCurryable("difference");
 const intersection = booleanTransformCurryable("intersection");
 
-class Highlight extends ParentGeometry implements Geometry3D {
-	constructor(g: Geometry3D) {
+class Highlight<G extends V2|V3> extends ParentGeometry<G> implements Geometry<G> {
+	constructor(g: Geometry<G>) {
 		super(g);
 	}
 	getCode() {
@@ -307,6 +359,10 @@ function dumpster() : Geometry3D {
 	return importFile("/home/mlpotter/Downloads/prints/1_18_scale_Garbage_Dumpster_2940197/files/dtg_dumpster.stl");
 }
 console.log(dumpster().serialize());
+
+function test_2d() : Geometry<V2> {
+	return square([10, 10]);
+}
 
 // console.log(g.getCode().join('\n'))  // TODO DELETE ME
 // console.log(g2.getCode().join('\n'))  // TODO DELETE ME
