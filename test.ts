@@ -31,8 +31,10 @@ interface Geometry<G extends V2|V3> {
 	serialize: () => string;
 }
 
-type Geometry2D = Geometry<V2>
-type Geometry3D = Geometry<V3>
+interface Geometry2D extends Geometry<V2> {
+}
+interface Geometry3D extends Geometry<V2> {
+}
 
 class BaseGeometry<G extends V2|V3> implements Geometry<G> {
 	getCode() { return [""]; }
@@ -74,6 +76,9 @@ class ParentGeometry<G extends V2|V3> extends BaseGeometry<G> {
 	constructor(children: Geometry<G>|Geometry<G>[]) {
 		super();
 		this.children = ensureGeometryList(children);
+	}
+	indentChildCode(): string[] {
+		return this.children.flatMap(g => g.getCode().map(l => "  " + l)) 
 	}
 }
 
@@ -228,6 +233,38 @@ function circle(opts: CircleOpts): Geometry2D {
 	return new Circle(opts);
 }
 
+type LinearExtrudeOpts = {
+	center?: boolean,
+	convexity?: number,
+	twist?: number,
+	slices?: number,
+	scale?: number,
+	fn?: number,
+}
+class LinearExtrude extends ParentGeometry<V3> {
+	opts: LinearExtrudeOpts;
+	height: number;
+	constructor(height: number, opts: LinearExtrudeOpts, children: Geometry2D|Geometry2D[]) {
+		// Seems like typescript should fail on this, but oh well.
+		super(children);
+		this.height = height;
+		this.opts = opts;
+	}
+	getCode(): string[] {
+		return [`linear_extrude(` +
+				`height=${this.height}, ` +
+				`convexity=${this.opts.convexity}, ` +
+				`twist=${this.opts.twist}, ` +
+				`slices=${this.opts.slices}, ` +
+				`scale=${this.opts.scale}, ` +
+				`$fn=${this.opts.fn} ` +
+				`) {`,
+				 ...this.indentChildCode(),
+				'}',
+			];
+	}
+}
+
 ////////////////////////////////////////////////////////////////////////
 //                               PATHS                                //
 ////////////////////////////////////////////////////////////////////////
@@ -246,7 +283,7 @@ class VectorTransform<V extends V2|V3, G extends V2|V3> extends ParentGeometry<G
 	}
 	getCode() { return [
 		`${this.transform}(${V2or3toString(this.v)}) {`,
-		 ...this.children.flatMap(g => g.getCode().map(l => "  " + l)),
+		 ...this.indentChildCode(),
 		`}`,
 	]}
 }
@@ -269,7 +306,7 @@ class BooleanTransform<G extends V2|V3> extends ParentGeometry<G> {
 	}
 	getCode() { return [
 		`${this.t}() {`,
-		...this.children.flatMap(g => g.getCode().map(l => "  " + l)),
+		...this.indentChildCode(),
 		`}`,
 	]}
 }
