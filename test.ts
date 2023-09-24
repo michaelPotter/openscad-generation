@@ -173,6 +173,9 @@ function importFile(path: string) {
 //                            2D GEOMETRY                             //
 ////////////////////////////////////////////////////////////////////////
 
+// class Square extends Geometry2D {
+// }
+
 ////////////////////////////////////////////////////////////////////////
 //                               PATHS                                //
 ////////////////////////////////////////////////////////////////////////
@@ -181,16 +184,16 @@ function importFile(path: string) {
 //                             TRANSFORMS                             //
 ////////////////////////////////////////////////////////////////////////
 
-class VectorTransform extends ParentGeometry {
+class VectorTransform<V extends V2|V3> extends ParentGeometry {
 	transform: string;
-	v: V3;
-	constructor(transform: string, v: V3, g: Geometry3D|Geometry3D[]) {
+	v: V;
+	constructor(transform: string, v: V, g: Geometry3D|Geometry3D[]) {
 		super(g);
 		this.transform = transform;
 		this.v = v;
 	}
 	getCode() { return [
-		`${this.transform}(${V3toString(this.v)}) {`,
+		`${this.transform}(${V2or3toString(this.v)}) {`,
 		 ...this.children.flatMap(g => g.getCode().map(l => "  " + l)),
 		`}`,
 	]}
@@ -199,9 +202,9 @@ class VectorTransform extends ParentGeometry {
 const vectorTransformCurryable =
 	(t: string) =>
 		(g: Geometry3D|Geometry3D[]) =>
-			(v: V3): Geometry3D =>
+			(v: V2|V3): Geometry3D =>
 				new VectorTransform(t, v, g)
-const basicTransform = (t: string) => (v: V3, g: Geometry3D|Geometry3D[]): Geometry3D => vectorTransformCurryable(t)(g)(v);
+const basicTransform = (t: string) => (v: V2|V3, g: Geometry3D|Geometry3D[]): Geometry3D => vectorTransformCurryable(t)(g)(v);
 const translate = basicTransform("translate");
 const rotate = basicTransform("rotate");
 const mirror = basicTransform("mirror");
@@ -242,8 +245,14 @@ const newHighlight = (g: Geometry3D): Geometry3D => {
 //                               UTILS                                //
 ////////////////////////////////////////////////////////////////////////
 
+function V2toString(v: V2): string {
+	return `[${v[0]}, ${v[1]}]}]`;
+}
 function V3toString(v: V3): string {
 	return `[${v[0]}, ${v[1]}, ${v[2]}]`;
+}
+function V2or3toString(v: V2|V3): string {
+	return v.length == 2 ? V2toString(v) : V3toString(v);
 }
 
 function ensureGeometryList(g: Geometry3D|Geometry3D[]): Geometry3D[] {
