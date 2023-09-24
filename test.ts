@@ -192,7 +192,7 @@ class Square extends BaseGeometry2D implements Geometry2D {
 		this.opts = opts;
 	}
 	getCode() {
-		return [`square([${V2toString(this.size)}], center=${this.opts.center});`];
+		return [`square(${V2toString(this.size)}, center=${this.opts.center});`];
 	}
 }
 function square(size: V2, opts?: SquareOpts): Geometry2D {
@@ -298,7 +298,7 @@ const newHighlight = (g: Geometry3D): Geometry3D => {
 ////////////////////////////////////////////////////////////////////////
 
 function V2toString(v: V2): string {
-	return `[${v[0]}, ${v[1]}]}]`;
+	return `[${v[0]}, ${v[1]}]`;
 }
 function V3toString(v: V3): string {
 	return `[${v[0]}, ${v[1]}, ${v[2]}]`;
@@ -358,11 +358,12 @@ function car() : Geometry3D {
 function dumpster() : Geometry3D {
 	return importFile("/home/mlpotter/Downloads/prints/1_18_scale_Garbage_Dumpster_2940197/files/dtg_dumpster.stl");
 }
-console.log(dumpster().serialize());
+// console.log(dumpster().serialize());
 
 function test_2d() : Geometry<V2> {
-	return square([10, 10]);
+	return square([10, 10]).difference(circle({r:5}));
 }
+console.log(test_2d().serialize());
 
 // console.log(g.getCode().join('\n'))  // TODO DELETE ME
 // console.log(g2.getCode().join('\n'))  // TODO DELETE ME
