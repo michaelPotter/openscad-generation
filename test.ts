@@ -252,13 +252,13 @@ class LinearExtrude extends ParentGeometry<V3> {
 	}
 	getCode(): string[] {
 		return [`linear_extrude(` +
-				`height=${this.height}, ` +
-				`center=${this.opts.center ?? false}, ` +
-				`convexity=${this.opts.convexity ?? 10}, ` +
-				`twist=${this.opts.twist ?? 0}, ` +
-				`slices=${this.opts.slices ?? 20}, ` +
-				`scale=${this.opts.scale ?? 1.0}, ` +
-				`$fn=${this.opts.fn ?? 0} ` +
+				`height=${this.height}` +
+				(this.opts.center    == undefined ? '' : ` , center=${this.opts.center}`) +
+				(this.opts.convexity == undefined ? '' : ` , convexity=${this.opts.convexity}`) +
+				(this.opts.twist     == undefined ? '' : ` , twist=${this.opts.twist}`) +
+				(this.opts.slices    == undefined ? '' : ` , slices=${this.opts.slices}`) +
+				(this.opts.scale     == undefined ? '' : ` , scale=${this.opts.scale}`) +
+				(this.opts.fn        == undefined ? '' : ` , $fn=${this.opts.fn}`) +
 				`) {`,
 				 ...this.indentChildCode(),
 				'}',
@@ -402,12 +402,14 @@ function dumpster() : Geometry3D {
 // console.log(dumpster().serialize());
 
 function test_2d() : Geometry<any> {
-	return linearExtrude(10, {}, 
-	square([10, 10])
-		.difference(circle({r:5}))
-		// .linear_extrude(4)
-	);
-		;
+	return (
+		linearExtrude(5, {twist:180, center: true}, 
+		square([10, 10])
+			// .difference(circle({r:5}))
+			// .linear_extrude(4)
+		)
+	)
+	;
 }
 console.log(test_2d().serialize());
 
