@@ -29,6 +29,7 @@ interface Geometry3D {
 
 type V3 = [number, number, number];
 type V2 = [number, number];
+type Path = V2[];
 
 class BaseGeometry3D implements Geometry3D {
 	getCode() { return [""]; }
@@ -68,7 +69,7 @@ class ParentGeometry extends BaseGeometry3D {
 }
 
 ////////////////////////////////////////////////////////////////////////
-//                              GEOMETRY                              //
+//                            3D GEOMETRY                             //
 ////////////////////////////////////////////////////////////////////////
 
 type CubeOpts = {center:boolean};
@@ -167,6 +168,14 @@ class ImportedGeometry extends BaseGeometry3D {
 function importFile(path: string) {
 	return new ImportedGeometry(path);
 }
+
+////////////////////////////////////////////////////////////////////////
+//                            2D GEOMETRY                             //
+////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////
+//                               PATHS                                //
+////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////
 //                             TRANSFORMS                             //
