@@ -14,12 +14,16 @@ interface Geometry<G extends V2|V3> {
 	translate: vectorTransform<G>;
 	rotate:    vectorTransform<G>;
 	mirror:    vectorTransform<G>;
+	scale:     vectorTransform<G>;
 
 	union:        booleanTransform<G>;
 	difference:   booleanTransform<G>;
 	intersection: booleanTransform<G>;
 
+	linear_extrude : (n: number, o?:LinearExtrudeOpts) => Geometry<V3>;
+
 	highlight : () => Geometry<G>;
+	hash      : () => Geometry<G>; // Alias for highlight
 
 	up    : (n: number) => Geometry<G>;
 	down  : (n: number) => Geometry<G>;
@@ -43,12 +47,16 @@ class BaseGeometry<G extends V2|V3> implements Geometry<G> {
 	translate: vectorTransform<G> = vectorTransformCurryable("translate")(this);
 	rotate   : vectorTransform<G> = vectorTransformCurryable("rotate")(this);
 	mirror   : vectorTransform<G> = vectorTransformCurryable("mirror")(this);
+	scale    : vectorTransform<G> = vectorTransformCurryable("scale")(this);
 
 	union:        booleanTransform<G> = (g) => booleanTransformCurryable("union")([ this, ...ensureGeometryList(g) ]);
 	difference:   booleanTransform<G> = (g) => booleanTransformCurryable("difference")([this, ...ensureGeometryList(g)]);
 	intersection: booleanTransform<G> = (g) => booleanTransformCurryable("intersection")([this, ...ensureGeometryList(g)]);
 
+	linear_extrude: Geometry<G>['linear_extrude'] = (h, o?) => new LinearExtrude(h, o ?? {}, [this]);
+
 	highlight: () => Geometry<G> = () => newHighlight(this);
+	hash: () => Geometry<G> = () => newHighlight(this);
 
 	up    = (n: number) => this.translate([0,  0,  n]);
 	down  = (n: number) => this.translate([0,  0,  -n]);
@@ -301,6 +309,7 @@ const basicTransform = (t: string) => <G extends V2|V3>(v: V2|V3, g: Geometry<G>
 const translate = basicTransform("translate");
 const rotate = basicTransform("rotate");
 const mirror = basicTransform("mirror");
+const scale = basicTransform("scale");
 
 class BooleanTransform<G extends V2|V3> extends ParentGeometry<G> {
 	t: string;
@@ -333,6 +342,20 @@ class Highlight<G extends V2|V3> extends ParentGeometry<G> implements Geometry<G
 const newHighlight = (g: Geometry3D): Geometry3D => {
 	return new Highlight(g);
 }
+
+class TextNode<G extends V2|V3> extends BaseGeometry<G> {
+	text: string[];
+	constructor(text: string|string[]) {
+		super();
+		this.text = typeof text === "object" ? text : [text];
+	}
+	getCode() {
+		return this.text;
+	}
+}
+
+const text = <G extends V2|V3>(t:string|string[]) => new TextNode<G>(t);
+const comment = <G extends V2|V3>(t:string|string[]) => new TextNode<G>([t].flatMap(t => "// " + t));
 
 ////////////////////////////////////////////////////////////////////////
 //                               UTILS                                //
@@ -386,15 +409,30 @@ console.log(logo.serialize())  // TODO DELETE ME
 }
 
 function car() : Geometry3D {
-	let wheel = cylinder({h:3,r:8, center:true}).rotate([90,0,0])
+	let base_height = 8;
+	let top_height = 14;
+	let wheel_radius = 8;
+	let track = 80;
+	let wheel = (rotation?:V2|V3) => cylinder({h:3,r:wheel_radius, center:true}).rotate([90,0,0]).rotate(rotation ?? [0,0,0]);
+	let axle = cylinder({h:track,r:2,center:true}).rotate([90, 0, 0]);
 	return union([
-		cube([60,20,10], {center:true}),
-		cube([30,20,20], {center:true}).up(10).right(5),
-		wheel.translate([-20, -15, 0]),
-		wheel.translate([-20, 15, 0]),
+		text("$fa = 1;"),
+		text("$fs = 0.4;"),
+		scale([1.2, 1, 1], [
+			comment("Car body base"),
+			cube([60,20,base_height], {center:true}),
+			comment("Car body top"),
+			cube([30,20,top_height], {center:true}).translate([5,0,base_height/2+top_height/2-0.001]),
+		]).rotate([5,0,0]),
+		wheel([0,0,-20]).translate([-20, -track / 2, 0]),
+		wheel([0,0,-20]).translate([-20, track / 2, 0]),
+		wheel().translate([20, -track / 2, 0]),
+		wheel().translate([20, track / 2, 0]),
+		axle.right(20),
+		axle.left(20),
 	]);
 };
-// console.log(car().serialize());
+console.log(car().serialize());
 
 function dumpster() : Geometry3D {
 	return importFile("/home/mlpotter/Downloads/prints/1_18_scale_Garbage_Dumpster_2940197/files/dtg_dumpster.stl");
@@ -403,15 +441,15 @@ function dumpster() : Geometry3D {
 
 function test_2d() : Geometry<any> {
 	return (
-		linearExtrude(5, {twist:180, center: true}, 
+		// linearExtrude(5, {twist:180, center: true}, 
 		square([10, 10])
-			// .difference(circle({r:5}))
-			// .linear_extrude(4)
-		)
+			.difference(circle({r:5}))
+			.linear_extrude(4)
+		// )
 	)
 	;
 }
-console.log(test_2d().serialize());
+// console.log(test_2d().serialize());
 
 // console.log(g.getCode().join('\n'))  // TODO DELETE ME
 // console.log(g2.getCode().join('\n'))  // TODO DELETE ME
