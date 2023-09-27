@@ -279,6 +279,20 @@ function linearExtrude(height: number, opts={}, children: Geometry2D|Geometry2D[
 	return new LinearExtrude(height, opts, children);
 }
 
+class Polygon extends BaseGeometry2D {
+	points: Array<V2>;
+	constructor(points: Array<V2>) {
+		super();
+		this.points = points;
+	}
+	getCode(): string[] {
+		return [`polygon(${JSON.stringify(this.points)});`];
+	}
+}
+function polygon(points: V2[]) {
+	return new Polygon(points);
+}
+
 ////////////////////////////////////////////////////////////////////////
 //                               PATHS                                //
 ////////////////////////////////////////////////////////////////////////
