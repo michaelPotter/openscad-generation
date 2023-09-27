@@ -24,6 +24,7 @@ interface Geometry<G extends V2|V3> {
 
 	highlight : () => Geometry<G>;
 	hash      : () => Geometry<G>; // Alias for highlight
+	color     : (c: string) => Geometry<G>;
 
 	up    : (n: number) => Geometry<G>;
 	down  : (n: number) => Geometry<G>;
@@ -55,8 +56,9 @@ class BaseGeometry<G extends V2|V3> implements Geometry<G> {
 
 	linear_extrude: Geometry<G>['linear_extrude'] = (h, o?) => new LinearExtrude(h, o ?? {}, [this]);
 
-	highlight: () => Geometry<G> = () => newHighlight(this);
-	hash: () => Geometry<G> = () => newHighlight(this);
+	highlight: () => Geometry<G> = () => highlight(this);
+	hash: () => Geometry<G> = () => highlight(this);
+	color: Geometry<G>['color'] = (c) => new Color(c, this);
 
 	up    = (n: number) => this.translate([0,  0,  n]);
 	down  = (n: number) => this.translate([0,  0,  -n]);
@@ -339,8 +341,26 @@ class Highlight<G extends V2|V3> extends ParentGeometry<G> implements Geometry<G
 		return [ "#", ...this.children.flatMap(c => c.getCode()) ];
 	}
 }
-const newHighlight = (g: Geometry3D): Geometry3D => {
+const highlight = (g: Geometry3D): Geometry3D => {
 	return new Highlight(g);
+}
+
+class Color<G extends V2|V3> extends ParentGeometry<G> implements Geometry<G> {
+	_color: string;
+	constructor(color: string, g: Geometry<G>) {
+		super(g);
+		this._color = color;
+	}
+	getCode() {
+		return [
+			`color("${this._color}") {`,
+			...this.children.flatMap(c => c.getCode()),
+			"}",
+		];
+	}
+}
+const color = (c: string, g: Geometry3D): Geometry3D => {
+	return new Color(c, g);
 }
 
 class TextNode<G extends V2|V3> extends BaseGeometry<G> {
