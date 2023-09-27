@@ -375,7 +375,11 @@ class TextNode<G extends V2|V3> extends BaseGeometry<G> {
 }
 
 const text = <G extends V2|V3>(t:string|string[]) => new TextNode<G>(t);
-const comment = <G extends V2|V3>(t:string|string[]) => new TextNode<G>([t].flatMap(t => "// " + t));
+const comment = <G extends V2|V3>(t:string|string[]) => {
+	let textList = typeof t === "object" ? t : [t]
+	return new TextNode<G>(textList.flatMap(t => t.split("\n").map(t => "// " + t)))
+};
+
 
 ////////////////////////////////////////////////////////////////////////
 //                               UTILS                                //
