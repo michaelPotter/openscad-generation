@@ -319,12 +319,11 @@ function tweakPath(path: AnnotatedPath): V2[] {
 
 interface turtle {
 	getPath: () => V2[];
-	fwd:   (n:number) => turtle;
-	back:  (n:number) => turtle;
-	left:  (n:number) => turtle;
-	right: (n:number) => turtle;
-	x: (n:number) => turtle;
-	y: (n:number) => turtle;
+	jump: (v:V2) => turtle;
+	north: (n:number) => turtle;
+	south: (n:number) => turtle;
+	east:  (n:number) => turtle;
+	west:  (n:number) => turtle;
 	// chamfer: (n:number) => turtle;
 }
 
@@ -340,36 +339,35 @@ class Turtle implements turtle {
 	constructor() {
 	}
 
-	fwd(n:number) {
+	// Sets the turtle to an exact position
+	jump(v:V2) {
+		this.pen.x = v[0];
+		this.pen.y = v[1];
+		return this;
+	}
+	// Moves the turtle in the positive Y direction
+	north(n:number) {
 		this.pen.y += n;
 		this.stepTurtle();
 		return this;
 	}
-	back(n:number) {
+	// Moves the turtle in the negative Y direction
+	south(n:number) {
 		this.pen.y -= n;
 		this.stepTurtle();
 		return this;
 	}
-	left(n:number) {
+	// Moves the turtle in the positive X direction
+	east(n:number) {
+		this.pen.x += n;
+		this.stepTurtle();
+		return this;
+	}
+	// Moves the turtle in the negative X direction
+	west(n:number) {
 		this.pen.x -= n;
 		this.stepTurtle();
 		return this;
-	}
-	right(n:number) {
-		this.pen.x += n;
-		this.stepTurtle();
-		return this;
-	}
-	x(n:number) {
-		this.pen.x += n;
-		this.stepTurtle();
-		return this;
-	}
-	y(n:number) {
-		this.pen.y += n;
-		this.stepTurtle();
-		return this;
-
 	}
 	chamfer(n:number) {
 		this.pending_operation = {chamfer: n}
@@ -667,32 +665,42 @@ function sharpeningJig() : Geometry<any> {
 
 	let path = tweakPath(profile);
 
+
+	let main_chamfer = 1;
+	let inset_chamfer = 0.2;
+	let edge_chamfer = 0.2;
 	let turtlePath = new Turtle()
-		.fwd(top_lengths[0] - fence_inset)
-		.right(fence_inset)
-		.fwd(fence_inset)
-		.left(fence_inset)
+		.jump([0,1])
+		.north(top_lengths[0] - fence_inset - 1)
+		// fence inset
+		.chamfer(inset_chamfer).east(fence_inset)
+		.chamfer(inset_chamfer).north(fence_inset)
+		.chamfer(inset_chamfer).west(fence_inset)
 		// top fence
-		.left(fence_height)
-		.chamfer(1).fwd(top_fence_width)
-		.chamfer(1).right(fence_height)
-		.right(fence_inset)
-		.fwd(fence_inset)
-		.left(fence_inset)
-		.fwd(top_lengths[1] - fence_inset)
-		.right(base_size[2])
-		.back(bot_lengths[1] - fence_inset)
-		.left(fence_inset)
-		.back(fence_inset)
-		.right(fence_inset)
+		.west(fence_height)
+		.chamfer(main_chamfer).north(top_fence_width)
+		.chamfer(main_chamfer).east(fence_height)
+		// fence inset
+		.east(fence_inset)
+		.chamfer(inset_chamfer).north(fence_inset)
+		.chamfer(inset_chamfer).west(fence_inset)
+		// north top bed
+		.chamfer(inset_chamfer).north(top_lengths[1] - fence_inset)
+		.chamfer(edge_chamfer).east(base_size[2])
+		.chamfer(edge_chamfer).south(bot_lengths[1] - fence_inset)
+		.chamfer(inset_chamfer).west(fence_inset)
+		.chamfer(inset_chamfer).south(fence_inset)
+		.chamfer(inset_chamfer).east(fence_inset)
 		// bot fence
-		.right(fence_height)
-		.back(bot_fence_width)
-		.left(fence_height)
-		.left(fence_inset)
-		.back(fence_inset)
-		.right(fence_inset)
-		.back(bot_lengths[0] - fence_inset)
+		.east(fence_height)
+		.chamfer(main_chamfer).south(bot_fence_width)
+		.chamfer(main_chamfer).west(fence_height)
+		.west(fence_inset)
+		.chamfer(inset_chamfer).south(fence_inset)
+		.chamfer(inset_chamfer).east(fence_inset)
+		.chamfer(inset_chamfer).south(bot_lengths[0] - fence_inset)
+		.chamfer(edge_chamfer).west(base_size[2])
+		.chamfer(edge_chamfer).north(1)
 		.getPath();
 
 	// turtlePath = new Turtle()
@@ -704,7 +712,7 @@ function sharpeningJig() : Geometry<any> {
 
 	return union([
 		new Polygon(path),
-		draw_at_points(path, sphere({r:0.5, fn:32})).color("red").translate([0,0,1]),
+		// draw_at_points(path, sphere({r:0.5, fn:32})).color("red").translate([0,0,1]),
 		// comment(JSON.stringify(profile.slice(0, 3), null, 2)),
 		// comment(JSON.stringify(path.slice(0, 4), null, 2)),
 		comment(JSON.stringify(turtlePath, null, 2)),
