@@ -297,6 +297,112 @@ function polygon(points: V2[]) {
 //                               PATHS                                //
 ////////////////////////////////////////////////////////////////////////
 
+type PathAnnotation = {
+	chamfer?: number;
+}
+
+type AnnotatedPath = Array<[ number, number, PathAnnotation ]>;
+function tweakPath(path: AnnotatedPath): V2[] {
+	const aToP: (a: Parameters<typeof tweakPath>[0][0]) => V2 = (a) => [a[0], a[1]];
+	return getPathThruples(path)
+		.flatMap(pointSet => {
+		let midPoint = pointSet[1];
+		if (midPoint[2].chamfer && midPoint[2].chamfer != 0) {
+			let ps: [V2, V2, V2] = [aToP(pointSet[0]), aToP(pointSet[1]), aToP(pointSet[2])];
+			return chamferPoints(ps, midPoint[2].chamfer);
+		} else {
+			return [aToP(midPoint)];
+		}
+	});
+}
+
+
+interface turtle {
+	getPath: () => V2[];
+	fwd:   (n:number) => turtle;
+	back:  (n:number) => turtle;
+	left:  (n:number) => turtle;
+	right: (n:number) => turtle;
+	x: (n:number) => turtle;
+	y: (n:number) => turtle;
+	// chamfer: (n:number) => turtle;
+}
+
+class Turtle implements turtle {
+	path: V2[] = [[0,0]];
+	pen = {
+		x: 0,
+		y: 0,
+	};
+	pending_operation: null|{
+		chamfer?: number,
+	} = null;
+	constructor() {
+	}
+
+	fwd(n:number) {
+		this.pen.y += n;
+		this.stepTurtle();
+		return this;
+	}
+	back(n:number) {
+		this.pen.y -= n;
+		this.stepTurtle();
+		return this;
+	}
+	left(n:number) {
+		this.pen.x -= n;
+		this.stepTurtle();
+		return this;
+	}
+	right(n:number) {
+		this.pen.x += n;
+		this.stepTurtle();
+		return this;
+	}
+	x(n:number) {
+		this.pen.x += n;
+		this.stepTurtle();
+		return this;
+	}
+	y(n:number) {
+		this.pen.y += n;
+		this.stepTurtle();
+		return this;
+
+	}
+	chamfer(n:number) {
+		this.pending_operation = {chamfer: n}
+		return this;
+	}
+
+	stepTurtle() {
+		let penPoint: V2 = [ this.pen.x, this.pen.y ];
+		if (this.pending_operation?.chamfer) {
+			let chamfer = this.pending_operation.chamfer;
+			let midPoint = this.path.pop();
+			let startPoint = this.path.pop();
+			if (midPoint && startPoint) {
+				let newPoints = chamferPoints([startPoint, midPoint, penPoint], chamfer);
+				this.path.push(startPoint);
+				this.path.push(...newPoints);
+				this.path.push(penPoint);
+				this.pending_operation = null;
+			} else {
+				console.warn("Too few points in turtle path to chamfer?");
+			}
+		} else {
+			this.path.push(penPoint);
+		}
+	}
+	getPath() {
+		return this.path;
+	}
+
+}
+
+
+
 ////////////////////////////////////////////////////////////////////////
 //                             TRANSFORMS                             //
 ////////////////////////////////////////////////////////////////////////
@@ -413,6 +519,46 @@ function ensureGeometryList(g: Geometry3D|Geometry3D[]): Geometry3D[] {
 	return "getCode" in g ? [g] : g;
 }
 
+const sum = (a: Array<number>) => a.reduce((cum, v) => cum + v); // TODO probably don't keep this.
+
+function draw_at_points(points: Array<V2|V3>, children: Geometry<any>|Geometry<any>[]): Geometry<V2|V3> {
+	return union(points.map(p => translate(p, children)));
+}
+
+// Given a list of points, map each point to a "thruple" containing the previous, current and next point. Wraps around to to the end/beginning of the list for first/last points.
+function getPathThruples<T>(a: Array<T>): Array<[T, T, T]> {
+	let r: Array<[T, T, T]> = [];
+	if (a.length < 3) {
+		throw new Error("Must pass a list of at least three");
+	}
+	r.push([a[a.length-1], a[0], a[1]]);
+	for (let i = 1; i < a.length - 1; i++) {
+		r.push([a[i - 1], a[i], a[i+1]]);
+	}
+	r.push([a[a.length-2], a[a.length-1], a[0]]);
+	return r;
+}
+
+// Given 3 points, chamfer the middle point and return two points that would replace it.
+function chamferPoints(ps: [V2, V2, V2], chamfer:number): [V2, V2] {
+	let pointSet = ps.map(p => ({x: p[0], y: p[1], a: [2]}));
+	let midPoint = pointSet[1];
+	let theta1 = Math.atan((pointSet[0].y - midPoint.y) / (pointSet[0].x - midPoint.x))
+	let theta2 = Math.atan((pointSet[2].y - midPoint.y) / (pointSet[2].x - midPoint.x))
+	console.log(`// midPoint: `, midPoint)  // TODO DELETE ME
+	console.log(`// theta1 / Math.PI: `, theta1 / Math.PI)  // TODO DELETE ME
+	return [
+		[
+			midPoint.x + chamfer*Math.cos(theta1) * Math.sign(pointSet[0].x - midPoint.x),
+			midPoint.y + chamfer*Math.sin(theta1),
+		],
+		[
+			midPoint.x + chamfer*Math.cos(theta2) * Math.sign(pointSet[2].x - midPoint.x),
+			midPoint.y + chamfer*Math.sin(theta2),
+		],
+	];
+}
+
 ////////////////////////////////////////////////////////////////////////
 //                              testing                               //
 ////////////////////////////////////////////////////////////////////////
@@ -470,7 +616,7 @@ function car() : Geometry3D {
 		axle.left(20),
 	]);
 };
-console.log(car().serialize());
+// console.log(car().serialize());
 
 function dumpster() : Geometry3D {
 	return importFile("/home/mlpotter/Downloads/prints/1_18_scale_Garbage_Dumpster_2940197/files/dtg_dumpster.stl");
@@ -488,6 +634,83 @@ function test_2d() : Geometry<any> {
 	;
 }
 // console.log(test_2d().serialize());
+function sharpeningJig() : Geometry<any> {
+	const INCH = 25.4;
+	let lengths = [50, 40, 38, 30];
+	let top_lengths = [50,30];
+	let bot_lengths = [38,40];
+	let sep_min_width = 4;
+	let fence_height = 10;
+
+	let base_len = Math.max(sum(top_lengths), sum(bot_lengths)) + sep_min_width;
+	// Full size of the thing
+	let base_size = [2*INCH, base_len, 3];
+	let top_fence_width = base_len - sum(top_lengths);
+	let bot_fence_width = base_len - sum(bot_lengths);
+
+	let fence_inset = 1;
+
+	let profile: AnnotatedPath = [
+		[fence_height,                  0                         , {}] ,
+		[fence_height,                  top_lengths[0]            , {chamfer: 1}] ,
+		[0,                             top_lengths[0]            , {chamfer: 1}] ,
+		[0,                             base_len - top_lengths[1] , {}] ,
+		[fence_height,                  base_len - top_lengths[1] , {}] ,
+		[fence_height,                  base_len                  , {}] ,
+		[fence_height + base_size[2],   base_len                  , {}] ,
+		[fence_height + base_size[2],   base_len - bot_lengths[1] , {}] ,
+		[2*fence_height + base_size[2], base_len - bot_lengths[1] , {}] ,
+		[2*fence_height + base_size[2], bot_lengths[0]            , {}] ,
+		[fence_height + base_size[2],   bot_lengths[0]            , {}] ,
+		[fence_height + base_size[2],   0                         , {}] ,
+	];
+
+	let path = tweakPath(profile);
+
+	let turtlePath = new Turtle()
+		.fwd(top_lengths[0] - fence_inset)
+		.right(fence_inset)
+		.fwd(fence_inset)
+		.left(fence_inset)
+		// top fence
+		.left(fence_height)
+		.chamfer(1).fwd(top_fence_width)
+		.chamfer(1).right(fence_height)
+		.right(fence_inset)
+		.fwd(fence_inset)
+		.left(fence_inset)
+		.fwd(top_lengths[1] - fence_inset)
+		.right(base_size[2])
+		.back(bot_lengths[1] - fence_inset)
+		.left(fence_inset)
+		.back(fence_inset)
+		.right(fence_inset)
+		// bot fence
+		.right(fence_height)
+		.back(bot_fence_width)
+		.left(fence_height)
+		.left(fence_inset)
+		.back(fence_inset)
+		.right(fence_inset)
+		.back(bot_lengths[0] - fence_inset)
+		.getPath();
+
+	// turtlePath = new Turtle()
+	// 	.fwd(5)
+	// 	.chamfer(1).right(5)
+	// 	.getPath();
+
+	path = turtlePath;
+
+	return union([
+		new Polygon(path),
+		draw_at_points(path, sphere({r:0.5, fn:32})).color("red").translate([0,0,1]),
+		// comment(JSON.stringify(profile.slice(0, 3), null, 2)),
+		// comment(JSON.stringify(path.slice(0, 4), null, 2)),
+		comment(JSON.stringify(turtlePath, null, 2)),
+	])
+}
+console.log(sharpeningJig().serialize());
 
 // console.log(g.getCode().join('\n'))  // TODO DELETE ME
 // console.log(g2.getCode().join('\n'))  // TODO DELETE ME
