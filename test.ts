@@ -9,8 +9,11 @@ type Path = V2[];
 type vectorTransform<G extends V2|V3> = (v: V2|V3) => Geometry<G>
 type booleanTransform<G extends V2|V3> = (g:Geometry<G>|Geometry<G>[]) => Geometry<G>
 
-interface Geometry<G extends V2|V3> {
+interface OpenSCADCode {
 	getCode: () => string[];
+}
+
+interface Geometry<G extends V2|V3> extends OpenSCADCode {
 	getSize: () => V3;
 
 	translate: vectorTransform<G>;
@@ -420,8 +423,6 @@ class Turtle implements turtle {
 	}
 
 }
-
-
 
 ////////////////////////////////////////////////////////////////////////
 //                             TRANSFORMS                             //
