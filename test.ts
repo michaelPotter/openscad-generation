@@ -1,5 +1,7 @@
 'use strict';
 
+import _ from 'underscore';
+
 type V3 = [number, number, number];
 type V2 = [number, number];
 type Path = V2[];
@@ -88,7 +90,7 @@ class ParentGeometry<G extends V2|V3> extends BaseGeometry<G> {
 		this.children = ensureGeometryList(children);
 	}
 	indentChildCode(): string[] {
-		return this.children.flatMap(g => g.getCode().map(l => "  " + l)) 
+		return this.children.flatMap(g => g.getCode().map(l => "  " + l))
 	}
 }
 
@@ -191,6 +193,26 @@ class ImportedGeometry extends BaseGeometry3D {
 }
 function importFile(path: string) {
 	return new ImportedGeometry(path);
+}
+
+function polyhedronByLayers(layers: V3[][]): Geometry3D {
+	let layers_closed = layers.map(l => {
+		return vEquals(l[0], l.slice(-1)[0]) ? l : [...l, l[0]]
+	});
+	let points: V3[] = layers_closed.flatMap(l => l);
+	let n = layers_closed[0].length;
+	let num_layers = layers.length;
+
+	let faces: number[][] = [
+		[...layers[0].keys()], // bottom face
+		_.range(num_layers * n - 1, (num_layers-1) * n, -1), // top face
+
+		// side faces
+		... _.range(num_layers-1).flatMap(l => _.range(n-1).map(i =>
+			[ (l*n) + i, (l*n) + i+1, ((l+1)*n) + i + 1, ((l+1)*n) + i ])),
+
+	];
+	return new TextNode(`polyhedron(points=${JSON.stringify(points)}, faces=${JSON.stringify(faces)});`);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -512,6 +534,16 @@ function V3toString(v: V3): string {
 function V2or3toString(v: V2|V3): string {
 	return v.length == 2 ? V2toString(v) : V3toString(v);
 }
+function vEquals(v1: V2|V3, v2: V2|V3): boolean {
+	return v1.length === v2.length &&
+		v1[0] == v2[0] &&
+		v1[1] == v2[1] &&
+		v1[2] == v2[2]
+}
+
+function setZ(v: V2|V3, z: number): V3 {
+	return [v[0], v[1], z];
+}
 
 function ensureGeometryList(g: Geometry3D|Geometry3D[]): Geometry3D[] {
 	return "getCode" in g ? [g] : g;
@@ -543,8 +575,6 @@ function chamferPoints(ps: [V2, V2, V2], chamfer:number): [V2, V2] {
 	let midPoint = pointSet[1];
 	let theta1 = Math.atan((pointSet[0].y - midPoint.y) / (pointSet[0].x - midPoint.x))
 	let theta2 = Math.atan((pointSet[2].y - midPoint.y) / (pointSet[2].x - midPoint.x))
-	console.log(`// midPoint: `, midPoint)  // TODO DELETE ME
-	console.log(`// theta1 / Math.PI: `, theta1 / Math.PI)  // TODO DELETE ME
 	return [
 		[
 			midPoint.x + chamfer*Math.cos(theta1) * Math.sign(pointSet[0].x - midPoint.x),
@@ -556,6 +586,31 @@ function chamferPoints(ps: [V2, V2, V2], chamfer:number): [V2, V2] {
 		],
 	];
 }
+
+////////////////////////////////////////////////////////////////////////
+//                           TYPE OVERRIDES                           //
+////////////////////////////////////////////////////////////////////////
+
+// interface RelativeIndexable<T> {
+//     /**
+//      * Takes an integer value and returns the item at that index,
+//      * allowing for positive and negative integers.
+//      * Negative integers count back from the last item in the array.
+//      */
+//     at(index: number): T | undefined;
+// }
+// interface Array<T> extends RelativeIndexable<T> {
+// 	// length: Array['length'];
+// 	x: T | undefined;
+// 	y: T | undefined;
+// 	z: T | undefined;
+// }
+
+// type x = Array<any>['length']
+
+// Object .defineProperty(Array.prototype, "x", { get() { return this[0]; } });
+// Object .defineProperty(Array.prototype, "y", { get() { return this[1]; } });
+// Object .defineProperty(Array.prototype, "z", { get() { return this[2]; } });
 
 ////////////////////////////////////////////////////////////////////////
 //                              testing                               //
@@ -623,7 +678,7 @@ function dumpster() : Geometry3D {
 
 function test_2d() : Geometry<any> {
 	return (
-		// linearExtrude(5, {twist:180, center: true}, 
+		// linearExtrude(5, {twist:180, center: true},
 		square([10, 10])
 			.difference(circle({r:5}))
 			.linear_extrude(4)
@@ -710,12 +765,20 @@ function sharpeningJig() : Geometry<any> {
 
 	path = turtlePath;
 
+	// path = [[0,0], [0,10], [10,10], [10,0]];
+
 	return union([
-		new Polygon(path),
+		polyhedronByLayers([
+			path.map(p => setZ(p, 0)),
+			path.map(p => setZ(p, 2)),
+			path.map(p => setZ(p, 2*INCH - 2)),
+			path.map(p => setZ(p, 2*INCH)),
+		]),
+		// new Polygon(path).linear_extrude(2*INCH),
 		// draw_at_points(path, sphere({r:0.5, fn:32})).color("red").translate([0,0,1]),
 		// comment(JSON.stringify(profile.slice(0, 3), null, 2)),
 		// comment(JSON.stringify(path.slice(0, 4), null, 2)),
-		comment(JSON.stringify(turtlePath, null, 2)),
+		// comment(JSON.stringify(turtlePath, null, 2)),
 	])
 }
 console.log(sharpeningJig().serialize());
