@@ -2,18 +2,18 @@
 
 import _ from 'underscore';
 
-type V3 = [number, number, number];
-type V2 = [number, number];
-type Path = V2[];
+export type V3 = [number, number, number];
+export type V2 = [number, number];
+export type Path = V2[];
 
 type vectorTransform<G extends V2|V3> = (v: V2|V3) => Geometry<G>
 type booleanTransform<G extends V2|V3> = (g:Geometry<G>|Geometry<G>[]) => Geometry<G>
 
-interface OpenSCADCode {
+export interface OpenSCADCode {
 	getCode: () => string[];
 }
 
-interface Geometry<G extends V2|V3> extends OpenSCADCode {
+export interface Geometry<G extends V2|V3> extends OpenSCADCode {
 	getSize: () => V3;
 
 	translate: vectorTransform<G>;
@@ -41,12 +41,12 @@ interface Geometry<G extends V2|V3> extends OpenSCADCode {
 	serialize: () => string;
 }
 
-interface Geometry2D extends Geometry<V2> {
+export interface Geometry2D extends Geometry<V2> {
 }
-interface Geometry3D extends Geometry<V2> {
+export interface Geometry3D extends Geometry<V2> {
 }
 
-class BaseGeometry<G extends V2|V3> implements Geometry<G> {
+export class BaseGeometry<G extends V2|V3> implements Geometry<G> {
 	getCode() { return [""]; }
 	getSize(): V3 { return [0, 0, 0]; }
 
@@ -101,8 +101,8 @@ class ParentGeometry<G extends V2|V3> extends BaseGeometry<G> {
 //                            3D GEOMETRY                             //
 ////////////////////////////////////////////////////////////////////////
 
-type CubeOpts = {center:boolean};
-class Cube extends BaseGeometry3D implements Geometry3D {
+export type CubeOpts = {center:boolean};
+export class Cube extends BaseGeometry3D implements Geometry3D {
 	size: V3;
 	opts: CubeOpts;
 	constructor(size: V3, opts = {center: false}) {
@@ -116,12 +116,12 @@ class Cube extends BaseGeometry3D implements Geometry3D {
 	}
 }
 
-function cube(size: V3, opts?: CubeOpts): Geometry3D {
+export function cube(size: V3, opts?: CubeOpts): Geometry3D {
 	return new Cube(size, opts);
 }
 
-interface SphereOpts { d?:number , r?:number , fn?:number; }
-class Sphere extends BaseGeometry3D {
+export interface SphereOpts { d?:number , r?:number , fn?:number; }
+export class Sphere extends BaseGeometry3D {
 	params: Required<SphereOpts>;
 	constructor(opts: SphereOpts) {
 		super();
@@ -145,12 +145,12 @@ class Sphere extends BaseGeometry3D {
 		return [`sphere(d=${this.params.d}, $fn=${this.params.fn});`];
 	}
 }
-function sphere(opts: SphereOpts): Geometry3D {
+export function sphere(opts: SphereOpts): Geometry3D {
 	return new Sphere(opts);
 }
 
-interface CylinderOpts { d?:number, r?:number, h: number, fn?:number, center?:boolean }
-class Cylinder extends BaseGeometry3D {
+export interface CylinderOpts { d?:number, r?:number, h: number, fn?:number, center?:boolean }
+export class Cylinder extends BaseGeometry3D {
 	opts: Required<CylinderOpts>;
 	constructor(opts: CylinderOpts) {
 		super();
@@ -176,7 +176,7 @@ class Cylinder extends BaseGeometry3D {
 		return [`cylinder(d=${this.opts.d}, h=${this.opts.h}, center=${this.opts.center}, $fn=${this.opts.fn});`];
 	}
 }
-function cylinder(opts: CylinderOpts): Geometry3D {
+export function cylinder(opts: CylinderOpts): Geometry3D {
 	return new Cylinder(opts);
 }
 
@@ -194,11 +194,11 @@ class ImportedGeometry extends BaseGeometry3D {
 		throw new Error("It is impossible to get the size of an imported geometry");
 	}
 }
-function importFile(path: string) {
+export function importFile(path: string) {
 	return new ImportedGeometry(path);
 }
 
-function polyhedronByLayers(layers: V3[][]): Geometry3D {
+export function polyhedronByLayers(layers: V3[][]): Geometry3D {
 	let layers_closed = layers.map(l => {
 		return vEquals(l[0], l.slice(-1)[0]) ? l : [...l, l[0]]
 	});
@@ -222,8 +222,8 @@ function polyhedronByLayers(layers: V3[][]): Geometry3D {
 //                            2D GEOMETRY                             //
 ////////////////////////////////////////////////////////////////////////
 
-type SquareOpts = {center:boolean};
-class Square extends BaseGeometry2D implements Geometry2D {
+export type SquareOpts = {center:boolean};
+export class Square extends BaseGeometry2D implements Geometry2D {
 	size: V2;
 	opts: SquareOpts;
 	constructor(size: V2, opts = {center: false}) {
@@ -235,12 +235,12 @@ class Square extends BaseGeometry2D implements Geometry2D {
 		return [`square(${V2toString(this.size)}, center=${this.opts.center});`];
 	}
 }
-function square(size: V2, opts?: SquareOpts): Geometry2D {
+export function square(size: V2, opts?: SquareOpts): Geometry2D {
 	return new Square(size, opts);
 }
 
-type CircleOpts = {d?:number, r?:number, fn?:number};
-class Circle extends BaseGeometry2D implements Geometry2D {
+export type CircleOpts = {d?:number, r?:number, fn?:number};
+export class Circle extends BaseGeometry2D implements Geometry2D {
 	params: Required<CircleOpts>;
 	constructor(opts: CircleOpts) {
 		super();
@@ -264,11 +264,11 @@ class Circle extends BaseGeometry2D implements Geometry2D {
 		return [`circle(d=${this.params.d}, $fn=${this.params.fn});`];
 	}
 }
-function circle(opts: CircleOpts): Geometry2D {
+export function circle(opts: CircleOpts): Geometry2D {
 	return new Circle(opts);
 }
 
-type LinearExtrudeOpts = {
+export type LinearExtrudeOpts = {
 	center?: boolean,
 	convexity?: number,
 	twist?: number,
@@ -276,7 +276,7 @@ type LinearExtrudeOpts = {
 	scale?: number,
 	fn?: number,
 }
-class LinearExtrude extends ParentGeometry<V3> {
+export class LinearExtrude extends ParentGeometry<V3> {
 	opts: LinearExtrudeOpts;
 	height: number;
 	constructor(height: number, opts: LinearExtrudeOpts, children: Geometry2D|Geometry2D[]) {
@@ -300,11 +300,11 @@ class LinearExtrude extends ParentGeometry<V3> {
 			];
 	}
 }
-function linearExtrude(height: number, opts={}, children: Geometry2D|Geometry2D[]) {
+export function linearExtrude(height: number, opts={}, children: Geometry2D|Geometry2D[]) {
 	return new LinearExtrude(height, opts, children);
 }
 
-class Polygon extends BaseGeometry2D {
+export class Polygon extends BaseGeometry2D {
 	points: Array<V2>;
 	constructor(points: Array<V2>) {
 		super();
@@ -314,7 +314,7 @@ class Polygon extends BaseGeometry2D {
 		return [`polygon(${JSON.stringify(this.points)});`];
 	}
 }
-function polygon(points: V2[]) {
+export function polygon(points: V2[]) {
 	return new Polygon(points);
 }
 
@@ -322,12 +322,12 @@ function polygon(points: V2[]) {
 //                               PATHS                                //
 ////////////////////////////////////////////////////////////////////////
 
-type PathAnnotation = {
+export type PathAnnotation = {
 	chamfer?: number;
 }
 
-type AnnotatedPath = Array<[ number, number, PathAnnotation ]>;
-function tweakPath(path: AnnotatedPath): V2[] {
+export type AnnotatedPath = Array<[ number, number, PathAnnotation ]>;
+export function tweakPath(path: AnnotatedPath): V2[] {
 	const aToP: (a: Parameters<typeof tweakPath>[0][0]) => V2 = (a) => [a[0], a[1]];
 	return getPathThruples(path)
 		.flatMap(pointSet => {
@@ -342,7 +342,7 @@ function tweakPath(path: AnnotatedPath): V2[] {
 }
 
 
-interface turtle {
+export interface turtle {
 	getPath: () => V2[];
 	jump: (v:V2) => turtle;
 	north: (n:number) => turtle;
@@ -352,7 +352,7 @@ interface turtle {
 	// chamfer: (n:number) => turtle;
 }
 
-class Turtle implements turtle {
+export class Turtle implements turtle {
 	path: V2[] = [[0,0]];
 	pen = {
 		x: 0,
@@ -449,10 +449,10 @@ const vectorTransformCurryable =
 			(v: V2|V3): Geometry<G> =>
 				new VectorTransform(t, v, g)
 const basicTransform = (t: string) => <G extends V2|V3>(v: V2|V3, g: Geometry<G>|Geometry<G>[]): Geometry<G> => vectorTransformCurryable(t)(g)(v);
-const translate = basicTransform("translate");
-const rotate = basicTransform("rotate");
-const mirror = basicTransform("mirror");
-const scale = basicTransform("scale");
+export const translate = basicTransform("translate");
+export const rotate = basicTransform("rotate");
+export const mirror = basicTransform("mirror");
+export const scale = basicTransform("scale");
 
 class BooleanTransform<G extends V2|V3> extends ParentGeometry<G> {
 	t: string;
@@ -470,9 +470,9 @@ const booleanTransformCurryable = (t: string) => (g: Geometry3D[]) : Geometry3D 
 	return new BooleanTransform(t, g);
 }
 
-const union = booleanTransformCurryable("union");
-const difference = booleanTransformCurryable("difference");
-const intersection = booleanTransformCurryable("intersection");
+export const union = booleanTransformCurryable("union");
+export const difference = booleanTransformCurryable("difference");
+export const intersection = booleanTransformCurryable("intersection");
 
 class Highlight<G extends V2|V3> extends ParentGeometry<G> implements Geometry<G> {
 	constructor(g: Geometry<G>) {
@@ -482,7 +482,7 @@ class Highlight<G extends V2|V3> extends ParentGeometry<G> implements Geometry<G
 		return [ "#", ...this.children.flatMap(c => c.getCode()) ];
 	}
 }
-const highlight = (g: Geometry3D): Geometry3D => {
+export const highlight = (g: Geometry3D): Geometry3D => {
 	return new Highlight(g);
 }
 
@@ -500,7 +500,7 @@ class Color<G extends V2|V3> extends ParentGeometry<G> implements Geometry<G> {
 		];
 	}
 }
-const color = (c: string, g: Geometry3D): Geometry3D => {
+export const color = (c: string, g: Geometry3D): Geometry3D => {
 	return new Color(c, g);
 }
 
@@ -515,8 +515,8 @@ class TextNode<G extends V2|V3> extends BaseGeometry<G> {
 	}
 }
 
-const text = <G extends V2|V3>(t:string|string[]) => new TextNode<G>(t);
-const comment = <G extends V2|V3>(t:string|string[]) => {
+export const text = <G extends V2|V3>(t:string|string[]) => new TextNode<G>(t);
+export const comment = <G extends V2|V3>(t:string|string[]) => {
 	let textList = typeof t === "object" ? t : [t]
 	return new TextNode<G>(textList.flatMap(t => t.split("\n").map(t => "// " + t)))
 };
@@ -526,33 +526,33 @@ const comment = <G extends V2|V3>(t:string|string[]) => {
 //                               UTILS                                //
 ////////////////////////////////////////////////////////////////////////
 
-function V2toString(v: V2): string {
+export function V2toString(v: V2): string {
 	return `[${v[0]}, ${v[1]}]`;
 }
-function V3toString(v: V3): string {
+export function V3toString(v: V3): string {
 	return `[${v[0]}, ${v[1]}, ${v[2]}]`;
 }
-function V2or3toString(v: V2|V3): string {
+export function V2or3toString(v: V2|V3): string {
 	return v.length == 2 ? V2toString(v) : V3toString(v);
 }
-function vEquals(v1: V2|V3, v2: V2|V3): boolean {
+export function vEquals(v1: V2|V3, v2: V2|V3): boolean {
 	return v1.length === v2.length &&
 		v1[0] == v2[0] &&
 		v1[1] == v2[1] &&
 		v1[2] == v2[2]
 }
 
-function setZ(v: V2|V3, z: number): V3 {
+export function setZ(v: V2|V3, z: number): V3 {
 	return [v[0], v[1], z];
 }
 
-function ensureGeometryList(g: Geometry3D|Geometry3D[]): Geometry3D[] {
+export function ensureGeometryList(g: Geometry3D|Geometry3D[]): Geometry3D[] {
 	return "getCode" in g ? [g] : g;
 }
 
-const sum = (a: Array<number>) => a.reduce((cum, v) => cum + v); // TODO probably don't keep this.
+export const sum = (a: Array<number>) => a.reduce((cum, v) => cum + v); // TODO probably don't keep this.
 
-function draw_at_points(points: Array<V2|V3>, children: Geometry<any>|Geometry<any>[]): Geometry<V2|V3> {
+export function draw_at_points(points: Array<V2|V3>, children: Geometry<any>|Geometry<any>[]): Geometry<V2|V3> {
 	return union(points.map(p => translate(p, children)));
 }
 
@@ -782,7 +782,7 @@ function sharpeningJig() : Geometry<any> {
 		// comment(JSON.stringify(turtlePath, null, 2)),
 	])
 }
-console.log(sharpeningJig().serialize());
+// console.log(sharpeningJig().serialize());
 
 // console.log(g.getCode().join('\n'))  // TODO DELETE ME
 // console.log(g2.getCode().join('\n'))  // TODO DELETE ME
