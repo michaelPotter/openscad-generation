@@ -198,6 +198,7 @@ export function importFile(path: string) {
 	return new ImportedGeometry(path);
 }
 
+// NOTE: assumes points in each layer are defined counterclockwise
 export function polyhedronByLayers(layers: V3[][]): Geometry3D {
 	let layers_closed = layers.map(l => {
 		return vEquals(l[0], l.slice(-1)[0]) ? l : [...l, l[0]]
@@ -207,8 +208,8 @@ export function polyhedronByLayers(layers: V3[][]): Geometry3D {
 	let num_layers = layers.length;
 
 	let faces: number[][] = [
-		[...layers[0].keys()], // bottom face
-		_.range(num_layers * n - 1, (num_layers-1) * n, -1), // top face
+		[...layers[0].keys()].reverse(), // bottom face
+		_.range((num_layers-1) * n, num_layers * n), // top face
 
 		// side faces
 		... _.range(num_layers-1).flatMap(l => _.range(n-1).map(i =>
@@ -217,6 +218,16 @@ export function polyhedronByLayers(layers: V3[][]): Geometry3D {
 	];
 	return new TextNode(`polyhedron(points=${JSON.stringify(points)}, faces=${JSON.stringify(faces)});`);
 }
+    // faces=[[3,2,1,0],[6,7,8,9],[0,1,6,5],[1,2,7,6],[2,3,8,7],[3,4,9,8]]);
+
+
+//    6-------7
+//   /|      /|
+// 5,9+-----8 |
+//  | |     | |
+//  | 1-----|-2
+//  |/      |/
+// 0,4------3
 
 ////////////////////////////////////////////////////////////////////////
 //                            2D GEOMETRY                             //
@@ -344,7 +355,7 @@ export function tweakPath(path: AnnotatedPath): V2[] {
 
 export interface turtle {
 	getPath: () => V2[];
-	jump: (v:V2) => turtle;
+	// jump: (v:V2) => turtle;
 	north: (n:number) => turtle;
 	south: (n:number) => turtle;
 	east:  (n:number) => turtle;
@@ -353,7 +364,7 @@ export interface turtle {
 }
 
 export class Turtle implements turtle {
-	path: V2[] = [[0,0]];
+	path: V2[];
 	pen = {
 		x: 0,
 		y: 0,
@@ -361,15 +372,18 @@ export class Turtle implements turtle {
 	pending_operation: null|{
 		chamfer?: number,
 	} = null;
-	constructor() {
+	constructor(startingPoint: V2 = [0,0]) {
+		this.path = [startingPoint];
+		this.pen.x = startingPoint[0];
+		this.pen.y = startingPoint[1];
 	}
 
-	// Sets the turtle to an exact position
-	jump(v:V2) {
-		this.pen.x = v[0];
-		this.pen.y = v[1];
-		return this;
-	}
+	// // Sets the turtle to an exact position without drawing a path
+	// jump(v:V2) {
+	// 	this.pen.x = v[0];
+	// 	this.pen.y = v[1];
+	// 	return this;
+	// }
 	// Moves the turtle in the positive Y direction
 	north(n:number) {
 		this.pen.y += n;
@@ -515,11 +529,44 @@ class TextNode<G extends V2|V3> extends BaseGeometry<G> {
 	}
 }
 
-export const text = <G extends V2|V3>(t:string|string[]) => new TextNode<G>(t);
-export const comment = <G extends V2|V3>(t:string|string[]) => {
-	let textList = typeof t === "object" ? t : [t]
+export const code = <G extends V2|V3>(t:string|string[]) => new TextNode<G>(t);
+export const comment = <G extends V2|V3>(t:string|string[]|{toString:()=>string}) => {
+	let textList: string[];
+	if (typeof t === "string") {
+		textList = [t];
+	} else if (Array.isArray(t)) {
+		textList = t;
+	} else {
+		textList = [t.toString()];
+	}
 	return new TextNode<G>(textList.flatMap(t => t.split("\n").map(t => "// " + t)))
 };
+
+interface TextOpts {
+	size?: number,
+	font?: string,
+	halign?: "left"|"center"|"right",
+	valign?: "top"|"center"|"baseline"|"bottom",
+	spacing?: number,
+	direction?: "ltr"|"rtl"|"ttb"|"btt",
+	language?: string,
+	script?: string,
+	fn?: number,
+}
+class Text<G extends V2|V3> extends BaseGeometry<G> {
+	opts: TextOpts;
+	text: string
+	constructor(text: string, textOpts?: TextOpts) {
+		super();
+		this.text = text;
+		this.opts = textOpts ?? {};
+	}
+	getCode() {
+		return [`text(${objectToKwargs({text: this.text, ...this.opts})});`];
+	}
+}
+
+export const text = (text: string, textOpts?:TextOpts) => new Text(text, textOpts);
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -586,6 +633,12 @@ function chamferPoints(ps: [V2, V2, V2], chamfer:number): [V2, V2] {
 			midPoint.y + chamfer*Math.sin(theta2),
 		],
 	];
+}
+
+function objectToKwargs(o: object) {
+	return _.map(o, (value, key) => {
+		return `${key == "fn" ? "$fn" : key}=${JSON.stringify(value)}`
+	}).join(", ");
 }
 
 export function printScadCode(scad: OpenSCADCode) {
