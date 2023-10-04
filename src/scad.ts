@@ -122,7 +122,7 @@ export function cube(size: V3, opts?: CubeOpts): Geometry3D {
 
 export interface SphereOpts { d?:number , r?:number , fn?:number; }
 export class Sphere extends BaseGeometry3D {
-	params: Required<SphereOpts>;
+	params: SphereOpts & {d:number};
 	constructor(opts: SphereOpts) {
 		super();
 		let r: number, d: number;
@@ -138,11 +138,11 @@ export class Sphere extends BaseGeometry3D {
 		this.params = {
 			d,
 			r,
-			fn: opts.fn ?? 0,
+			fn: opts.fn,
 		}
 	}
 	getCode() {
-		return [`sphere(d=${this.params.d}, $fn=${this.params.fn});`];
+		return [`sphere(${objectToKwargs(_.omit(this.params, ['r']))});`];
 	}
 }
 export function sphere(opts: SphereOpts): Geometry3D {
@@ -151,7 +151,7 @@ export function sphere(opts: SphereOpts): Geometry3D {
 
 export interface CylinderOpts { d?:number, r?:number, h: number, fn?:number, center?:boolean }
 export class Cylinder extends BaseGeometry3D {
-	opts: Required<CylinderOpts>;
+	opts: CylinderOpts & {d:number};
 	constructor(opts: CylinderOpts) {
 		super();
 		let r: number, d: number;
@@ -168,12 +168,12 @@ export class Cylinder extends BaseGeometry3D {
 			d,
 			r,
 			h: opts.h,
-			fn: opts.fn ?? 0,
+			fn: opts.fn,
 			center: opts.center ?? false,
 		}
 	}
 	getCode() {
-		return [`cylinder(d=${this.opts.d}, h=${this.opts.h}, center=${this.opts.center}, $fn=${this.opts.fn});`];
+		return [`cylinder(${objectToKwargs(_.omit(this.opts, ['r']))});`];
 	}
 }
 export function cylinder(opts: CylinderOpts): Geometry3D {
@@ -252,7 +252,7 @@ export function square(size: V2, opts?: SquareOpts): Geometry2D {
 
 export type CircleOpts = {d?:number, r?:number, fn?:number};
 export class Circle extends BaseGeometry2D implements Geometry2D {
-	params: Required<CircleOpts>;
+	params: CircleOpts & {d:number};
 	constructor(opts: CircleOpts) {
 		super();
 		let r: number, d: number;
@@ -268,11 +268,11 @@ export class Circle extends BaseGeometry2D implements Geometry2D {
 		this.params = {
 			d,
 			r,
-			fn: opts.fn ?? 0,
+			fn: opts.fn,
 		}
 	}
 	getCode() {
-		return [`circle(d=${this.params.d}, $fn=${this.params.fn});`];
+		return [`circle(${objectToKwargs(_.omit(this.params, ['r']))});`];
 	}
 }
 export function circle(opts: CircleOpts): Geometry2D {
@@ -529,7 +529,7 @@ class TextNode<G extends V2|V3> extends BaseGeometry<G> {
 	}
 }
 
-export const code = <G extends V2|V3>(t:string|string[]) => new TextNode<G>(t);
+export function code<G extends V2|V3>(t:string|string[]) { return new TextNode<G>(t) };
 export const comment = <G extends V2|V3>(t:string|string[]|{toString:()=>string}) => {
 	let textList: string[];
 	if (typeof t === "string") {
@@ -636,13 +636,16 @@ function chamferPoints(ps: [V2, V2, V2], chamfer:number): [V2, V2] {
 }
 
 function objectToKwargs(o: object) {
-	return _.map(o, (value, key) => {
-		return `${key == "fn" ? "$fn" : key}=${JSON.stringify(value)}`
-	}).join(", ");
+	return Object.entries(o)
+		.filter(([_, v]) => v != undefined)
+		.map(([k, v]) => [k == "fn" ? "$fn" : k, v])
+		.map(([k, v]) => `${k}=${v}`)
+		.join(", ")
+		;
 }
 
-export function printScadCode(scad: OpenSCADCode) {
-	console.log(scad.getCode().join("\n"))
+export function printScadCode(...scad: OpenSCADCode[]) {
+	scad.forEach(s => console.log(s.getCode().join("\n")));
 }
 
 ////////////////////////////////////////////////////////////////////////
