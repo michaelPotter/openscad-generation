@@ -24,6 +24,7 @@ export interface Geometry<G extends V2|V3> extends OpenSCADCode {
 	union:        booleanTransform<G>;
 	difference:   booleanTransform<G>;
 	intersection: booleanTransform<G>;
+	hull:         booleanTransform<G>;
 
 	linear_extrude : (n: number, o?:LinearExtrudeOpts) => Geometry<V3>;
 
@@ -58,6 +59,7 @@ export class BaseGeometry<G extends V2|V3> implements Geometry<G> {
 	union:        booleanTransform<G> = (g) => booleanTransformCurryable("union")([ this, ...ensureGeometryList(g) ]);
 	difference:   booleanTransform<G> = (g) => booleanTransformCurryable("difference")([this, ...ensureGeometryList(g)]);
 	intersection: booleanTransform<G> = (g) => booleanTransformCurryable("intersection")([this, ...ensureGeometryList(g)]);
+	hull: booleanTransform<G> = (g) => booleanTransformCurryable("hull")([this, ...ensureGeometryList(g)]);
 
 	linear_extrude: Geometry<G>['linear_extrude'] = (h, o?) => new LinearExtrude(h, o ?? {}, [this]);
 
@@ -487,6 +489,7 @@ const booleanTransformCurryable = (t: string) => (g: Geometry3D[]) : Geometry3D 
 export const union = booleanTransformCurryable("union");
 export const difference = booleanTransformCurryable("difference");
 export const intersection = booleanTransformCurryable("intersection");
+export const hull = booleanTransformCurryable("hull");
 
 class Highlight<G extends V2|V3> extends ParentGeometry<G> implements Geometry<G> {
 	constructor(g: Geometry<G>) {
