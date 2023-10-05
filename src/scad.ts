@@ -585,11 +585,76 @@ export function V3toString(v: V3): string {
 export function V2or3toString(v: V2|V3): string {
 	return v.length == 2 ? V2toString(v) : V3toString(v);
 }
+
+// VECTOR MATH
+
 export function vEquals(v1: V2|V3, v2: V2|V3): boolean {
 	return v1.length === v2.length &&
 		v1[0] == v2[0] &&
 		v1[1] == v2[1] &&
 		v1[2] == v2[2]
+}
+
+
+export function vDelta(v1: V2, v2: V2): V2;
+export function vDelta(v1: V3, v2: V3): V3;
+export function vDelta(v1: V2|V3, v2: V2|V3): V3;
+export function vDelta(v1: V2|V3, v2: V2|V3): V2|V3 {
+	if (v1.length == 2 && v2.length == 2) {
+		return [v2[0] - v1[0], v2[1] - v1[1]];
+	} else {
+		return [v2[0] - v1[0], v2[1] - v1[1], (v2[2] ?? 0) - (v1[2] ?? 0)];
+	}
+}
+
+/**
+ * Adds two vectors.
+ * Curryable, so a vector can be added to many vectors like so: vlist.map(vAdd(v))
+ */
+export function vAdd(v1: V2, v2: V2): V2;
+export function vAdd(v1: V2, v2: V3): V3;
+export function vAdd(v1: V3, v2: V2): V3;
+export function vAdd(v1: V3, v2: V3): V3;
+//
+export function vAdd(v1: V2): <T extends V2|V3>(v:T) => T;
+export function vAdd(v1: V3): (v:V2|V3) => V3;
+// Impl
+export function vAdd(v1: V2|V3, v2?: V2|V3): V2|V3|((v:V2|V3)=>V3)|(<T extends V2|V3>(v:T)=>T) {
+	if (v2 == undefined) {
+		return function vAddInner<T extends V2|V3>(v2: T): T {
+			// @ts-ignore // 
+			return vAdd(v1, v2);
+		};
+	} else if (v1.length == 2 && v2.length == 2) {
+		return [v1[0] + v2[0], v1[1] + v2[1]];
+	} else {
+		return [v1[0] + v2[0], v1[1] + v2[1], (v1[2] ?? 0) + (v1[2] ?? 0)];
+	}
+}
+
+/**
+ * Multiplies two vectors.
+ * Curryable, so a vector can be added to many vectors like so: vlist.map(vMult(v))
+ */
+export function vMult(v1: V2, v2: V2): V2;
+export function vMult(v1: V2, v2: V3): V3;
+export function vMult(v1: V3, v2: V2): V3;
+export function vMult(v1: V3, v2: V3): V3;
+//
+export function vMult(v1: V2): <T extends V2|V3>(v:T) => T;
+export function vMult(v1: V3): (v:V2|V3) => V3;
+// Impl
+export function vMult(v1: V2|V3, v2?: V2|V3): V2|V3|((v:V2|V3)=>V3)|(<T extends V2|V3>(v:T)=>T) {
+	if (v2 == undefined) {
+		return function vMultInner<T extends V2|V3>(v2: T): T {
+			// @ts-ignore // 
+			return vMult(v1, v2);
+		};
+	} else if (v1.length == 2 && v2.length == 2) {
+		return [v1[0] * v2[0], v1[1] * v2[1]];
+	} else {
+		return [v1[0] * v2[0], v1[1] * v2[1], (v1[2] ?? 0) * (v1[2] ?? 0)];
+	}
 }
 
 export function setZ(v: V2|V3, z: number): V3 {
