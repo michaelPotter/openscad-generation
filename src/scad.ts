@@ -438,6 +438,7 @@ export class Turtle implements turtle {
 
 }
 
+// TODO add opts
 /*
  * Returns a path that describes an arc on the unit circle.
  * Can pass both a start and end angle (in degrees), or just an end angle and
@@ -446,7 +447,7 @@ export class Turtle implements turtle {
 export function unitArc(degrees: number): Path;
 export function unitArc(start: number, end: number): Path;
 export function unitArc(a: number, b?: number): Path {
-	let steps = 32;
+	let steps = 4;
 	let end_rads: number, start_rads: number;
 	if (b == undefined) {
 		start_rads = 0;
@@ -474,9 +475,9 @@ type StrokePathOpts = {
 }
 export function strokePath(p: Path, opts?:StrokePathOpts): Geometry<V2 | V3>[] {
 	let strokeWidth = opts?.strokeWidth ?? 0.5;
-	let strokeColor = opts?.strokeColor ?? opts?.color ?? "yellow";
+	let strokeColor = opts?.strokeColor ?? opts?.color ?? "gold";
 	let pointColor = opts?.pointColor ?? opts?.color ?? "red";
-	let pointDiam = opts?.pointDiam ?? 3/2 * strokeWidth;
+	let pointDiam = opts?.pointDiam ?? 2 * strokeWidth;
 	let drawPoints: boolean = !! (opts?.points || opts?.pointDiam || opts?.pointColor)
 	let close = !! opts?.close;
 
@@ -486,12 +487,10 @@ export function strokePath(p: Path, opts?:StrokePathOpts): Geometry<V2 | V3>[] {
 		let rot = _angleFromTwoPoints(from, to);
 		let dist = _distFromTwoPoints(from, to);
 		return cube([dist, strokeWidth, 1])
-			// .down(0.5)
-			// .fwd(strokeWidth / 2)
 			.translate([0, -strokeWidth / 2, -0.5])
 			.rotate([0, 0, rot])
 			.translate(from)
-			// .color(strokeColor)
+			.color(strokeColor)
 	};
 	let defaultPoint = circle({ d: pointDiam }).color(pointColor)
 
