@@ -492,7 +492,7 @@ export function strokePath(p: Path, opts?:StrokePathOpts): Geometry<V2 | V3>[] {
 			.translate(from)
 			.color(strokeColor)
 	};
-	let defaultPoint = circle({ d: pointDiam }).color(pointColor)
+	let defaultPoint = circle({ d: pointDiam, fn: 12 }).color(pointColor)
 
 	let strokes = chunkChain(points).map(defaultStroke)
 	return [
@@ -720,8 +720,34 @@ export function vMult(v1: V2|V3, v2?: V2|V3): V2|V3|((v:V2|V3)=>V3)|(<T extends 
 	}
 }
 
+export function vInverse(v: V2): V2;
+export function vInverse(v: V3): V3;
+export function vInverse(v: V2|V3): V2|V3 {
+	if (v.length == 2) {
+		return [-v[0], -v[1]];
+	} else {
+		return [-v[0], -v[1], -v[2]];
+	}
+}
+
 export function setZ(v: V2|V3, z: number): V3 {
 	return [v[0], v[1], z];
+}
+
+// Returns a vector normal to the given vector.
+export function getNormalVector(v: V2): V2 {
+	return [v[1], -v[0]];
+}
+
+// Returns a new vector pointing in the same direction, but with the given length.
+export function setVectorLength(v: V2, l: number): V2 {
+	let ratio = l / getVectorLength(v);
+	return [v[0] * ratio, v[1] * ratio];
+}
+
+// Returns the length of the given vector (pythagorean theorem)
+export function getVectorLength(v: V2): number {
+	return Math.sqrt(Math.pow(v[1], 2) + Math.pow(v[0], 2));
 }
 
 export function ensureGeometryList(g: Geometry3D|Geometry3D[]): Geometry3D[] {
@@ -744,8 +770,17 @@ export function closePath<T extends V2|V3>(p: T[]): T[] {
  * Takes a list and chunks into chained pairs.
  * E.g. given the list [1, 2, 3, 4] return [[1, 2], [2, 3], [3, 4]]
  */
-function chunkChain<T>(a: T[]) {
+ // TODO update this to take a number
+ // TODO add a param to "wrap"
+ // TODO replace getPathThruples with this.
+export function chunkChain<T>(a: T[]) {
 	return _.zip(a.slice(0, -1), a.slice(1))
+	// Impl notes:
+	// 	- First make a list of lists to be zipped...
+	// 	- zip them
+	// 	- add in the wrap around chunks if necessary
+	// 	    - there will be (chunkSize - 1) extra chunks
+	// 	- ... maybe will need to check if the path is closed or else wrap=true could give wonky (duplicate) results
 }
 
 
@@ -758,8 +793,7 @@ export function _angleFromTwoPoints(a: V2, b: V2): number {
 
 // TODO support V3s
 function _distFromTwoPoints(a: V2, b: V2): number {
-	let delta = vDelta(b, a);
-	return Math.sqrt(Math.pow(delta[1], 2) + Math.pow(delta[0], 2));
+	return getVectorLength(vDelta(a, b));
 }
 
 // Given a list of points, map each point to a "thruple" containing the previous, current and next point. Wraps around to to the end/beginning of the list for first/last points.
