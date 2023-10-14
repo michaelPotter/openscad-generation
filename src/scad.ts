@@ -26,8 +26,6 @@ export interface Geometry<G extends V2|V3> extends OpenSCADCode {
 	intersection: booleanTransform<G>;
 	hull:         booleanTransform<G>;
 
-	linear_extrude : (n: number, o?:LinearExtrudeOpts) => Geometry<V3>;
-
 	highlight : () => Geometry<G>;
 	hash      : () => Geometry<G>; // Alias for highlight
 	color     : (c: string) => Geometry<G>;
@@ -43,13 +41,13 @@ export interface Geometry<G extends V2|V3> extends OpenSCADCode {
 }
 
 export interface Geometry2D extends Geometry<V2> {
+	linear_extrude : (n: number, o?:LinearExtrudeOpts) => Geometry<V3>;
 }
 export interface Geometry3D extends Geometry<V2> {
 }
 
 export abstract class BaseGeometry<G extends V2|V3> implements Geometry<G> {
 	abstract getCode(): string[];
-	// getCode() { return [""]; }
 	getSize(): V3 { return [0, 0, 0]; }
 
 	translate: vectorTransform<G> = vectorTransformCurryable("translate")(this);
@@ -61,8 +59,6 @@ export abstract class BaseGeometry<G extends V2|V3> implements Geometry<G> {
 	difference:   booleanTransform<G> = (...g) => new BooleanTransform("difference", _.flatten([this, g]));
 	intersection: booleanTransform<G> = (...g) => new BooleanTransform("intersection", _.flatten([this, g]));
 	hull:         booleanTransform<G> = (...g) => new BooleanTransform("hull", _.flatten([this, g]));
-
-	linear_extrude: Geometry<G>['linear_extrude'] = (h, o?) => new LinearExtrude(h, o ?? {}, [this]);
 
 	highlight: () => Geometry<G> = () => highlight(this);
 	hash: () => Geometry<G> = () => highlight(this);
@@ -85,6 +81,7 @@ export abstract class BaseGeometry<G extends V2|V3> implements Geometry<G> {
 abstract class BaseGeometry3D extends BaseGeometry<V3> {
 }
 abstract class BaseGeometry2D extends BaseGeometry<V2> {
+	linear_extrude: Geometry2D['linear_extrude'] = (h, o?) => new LinearExtrude(h, o ?? {}, [this]);
 }
 
 // TODO think this through some more, can we have it both ways?
