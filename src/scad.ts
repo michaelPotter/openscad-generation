@@ -42,6 +42,7 @@ export interface Geometry<G extends V2|V3> extends OpenSCADCode {
 
 export interface Geometry2D extends Geometry<V2> {
 	linear_extrude : (n: number, o?:LinearExtrudeOpts) => Geometry<V3>;
+	linearExtrude : (n: number, o?:LinearExtrudeOpts) => Geometry<V3>;
 }
 export interface Geometry3D extends Geometry<V2> {
 }
@@ -83,6 +84,7 @@ abstract class BaseGeometry3D extends BaseGeometry<V3> {
 }
 abstract class BaseGeometry2D extends BaseGeometry<V2> {
 	linear_extrude: Geometry2D['linear_extrude'] = (h, o?) => new LinearExtrude(h, o ?? {}, [this]);
+	linearExtrude: Geometry2D['linearExtrude'] = (h, o?) => new LinearExtrude(h, o ?? {}, [this]);
 }
 
 // TODO think this through some more, can we have it both ways?
