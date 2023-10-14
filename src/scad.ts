@@ -7,7 +7,7 @@ export type V2 = [number, number];
 export type Path = V2[];
 
 type vectorTransform<G extends V2|V3> = (v: V2|V3) => Geometry<G>
-type booleanTransform<G extends V2|V3> = (g:Geometry<G>|Geometry<G>[]) => Geometry<G>
+type booleanTransform<G extends V2|V3> = (...g:Geometry<G>[]|Geometry<G>[][]) => Geometry<G>
 
 export interface OpenSCADCode {
 	getCode: () => string[];
@@ -56,10 +56,10 @@ export class BaseGeometry<G extends V2|V3> implements Geometry<G> {
 	mirror   : vectorTransform<G> = vectorTransformCurryable("mirror")(this);
 	scale    : vectorTransform<G> = vectorTransformCurryable("scale")(this);
 
-	union:        booleanTransform<G> = (g) => booleanTransformCurryable("union")([ this, ...ensureGeometryList(g) ]);
-	difference:   booleanTransform<G> = (g) => booleanTransformCurryable("difference")([this, ...ensureGeometryList(g)]);
-	intersection: booleanTransform<G> = (g) => booleanTransformCurryable("intersection")([this, ...ensureGeometryList(g)]);
-	hull: booleanTransform<G> = (g) => booleanTransformCurryable("hull")([this, ...ensureGeometryList(g)]);
+	union:        booleanTransform<G> = (...g) => new BooleanTransform("union", _.flatten([this, g]));
+	difference:   booleanTransform<G> = (...g) => new BooleanTransform("difference", _.flatten([this, g]));
+	intersection: booleanTransform<G> = (...g) => new BooleanTransform("intersection", _.flatten([this, g]));
+	hull:         booleanTransform<G> = (...g) => new BooleanTransform("hull", _.flatten([this, g]));
 
 	linear_extrude: Geometry<G>['linear_extrude'] = (h, o?) => new LinearExtrude(h, o ?? {}, [this]);
 
