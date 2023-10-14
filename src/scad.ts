@@ -311,6 +311,8 @@ export class LinearExtrude extends ParentGeometry<V3> {
 			];
 	}
 }
+
+// TODO support taking a path instead of a geometry
 export function linearExtrude(height: number, opts={}, children: Geometry2D|Geometry2D[]) {
 	return new LinearExtrude(height, opts, children);
 }
@@ -473,7 +475,7 @@ type StrokePathOpts = {
 	strokeWidth?: number,
 	pointDiam?: number,
 }
-export function strokePath(p: Path, opts?:StrokePathOpts): Geometry<V2 | V3>[] {
+export function strokePath(p: Path, opts?:StrokePathOpts): Geometry<V2 | V3> {
 	let strokeWidth = opts?.strokeWidth ?? 0.5;
 	let strokeColor = opts?.strokeColor ?? opts?.color ?? "gold";
 	let pointColor = opts?.pointColor ?? opts?.color ?? "red";
@@ -495,10 +497,10 @@ export function strokePath(p: Path, opts?:StrokePathOpts): Geometry<V2 | V3>[] {
 	let defaultPoint = circle({ d: pointDiam, fn: 12 }).color(pointColor)
 
 	let strokes = chunkChain(points).map(defaultStroke)
-	return [
+	return union([
 		...strokes,
 		draw_at_points(drawPoints ? points : [], defaultPoint),
-	];
+	]);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -773,7 +775,7 @@ export function closePath<T extends V2|V3>(p: T[]): T[] {
  // TODO update this to take a number
  // TODO add a param to "wrap"
  // TODO replace getPathThruples with this.
-export function chunkChain<T>(a: T[]) {
+export function chunkChain<T>(a: T[], size?:number, wrap=false) {
 	return _.zip(a.slice(0, -1), a.slice(1))
 	// Impl notes:
 	// 	- First make a list of lists to be zipped...
