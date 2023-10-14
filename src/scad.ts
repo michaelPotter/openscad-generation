@@ -47,8 +47,9 @@ export interface Geometry2D extends Geometry<V2> {
 export interface Geometry3D extends Geometry<V2> {
 }
 
-export class BaseGeometry<G extends V2|V3> implements Geometry<G> {
-	getCode() { return [""]; }
+export abstract class BaseGeometry<G extends V2|V3> implements Geometry<G> {
+	abstract getCode(): string[];
+	// getCode() { return [""]; }
 	getSize(): V3 { return [0, 0, 0]; }
 
 	translate: vectorTransform<G> = vectorTransformCurryable("translate")(this);
@@ -81,14 +82,14 @@ export class BaseGeometry<G extends V2|V3> implements Geometry<G> {
 		// this.getSize = opts?.getSize ?? this.getSize;
 	}
 }
-class BaseGeometry3D extends BaseGeometry<V3> {
+abstract class BaseGeometry3D extends BaseGeometry<V3> {
 }
-class BaseGeometry2D extends BaseGeometry<V2> {
+abstract class BaseGeometry2D extends BaseGeometry<V2> {
 }
 
 // TODO think this through some more, can we have it both ways?
 // Is there a way to make G be V2 if it only contains 2D children, but 3D if it contains any 3D children??
-class ParentGeometry<G extends V2|V3> extends BaseGeometry<G> {
+abstract class ParentGeometry<G extends V2|V3> extends BaseGeometry<G> {
 	children: Geometry<G>[];
 	constructor(children: Geometry<G>|Geometry<G>[]) {
 		super();
@@ -97,6 +98,20 @@ class ParentGeometry<G extends V2|V3> extends BaseGeometry<G> {
 	indentChildCode(): string[] {
 		return this.children.flatMap(g => g.getCode().map(l => "  " + l))
 	}
+}
+
+/*
+ * A helper class for defining custom complex geometry.
+ * The user can extend this class, and as long as they define geometry(),
+ * they can have an object that can be treated like regular geometry with various
+ * extra properties.
+ */
+ // TODO make not V3? I'd rather not have to worry about V2 vs V3 in scripts
+export abstract class UserGeometry extends BaseGeometry<V3> {
+	getCode() {
+		return this.geometry().getCode();
+	}
+	abstract geometry(): Geometry<V3>;
 }
 
 ////////////////////////////////////////////////////////////////////////
