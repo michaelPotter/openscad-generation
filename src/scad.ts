@@ -49,6 +49,7 @@ export interface Geometry3D extends Geometry<V2> {
 export abstract class BaseGeometry<G extends V2|V3> implements Geometry<G> {
 	abstract getCode(): string[];
 	getSize(): V3 { return [0, 0, 0]; }
+	// abstract get size(): G // TODO implement this in the future
 
 	translate: vectorTransform<G> = vectorTransformCurryable("translate")(this);
 	rotate   : vectorTransform<G> = vectorTransformCurryable("rotate")(this);
@@ -137,6 +138,9 @@ export function cube(size: V3, opts?: CubeOpts): Geometry3D {
 export interface SphereOpts { d?:number , r?:number , fn?:number; }
 export class Sphere extends BaseGeometry3D {
 	params: SphereOpts & {d:number};
+	get size(): V3 {
+		return [this.params.d, this.params.d, this.params.d];
+	}
 	constructor(opts: SphereOpts) {
 		super();
 		let r: number, d: number;
@@ -166,6 +170,9 @@ export function sphere(opts: SphereOpts): Geometry3D {
 export interface CylinderOpts { d?:number, r?:number, h: number, fn?:number, center?:boolean }
 export class Cylinder extends BaseGeometry3D {
 	opts: CylinderOpts & {d:number};
+	get size(): V3 {
+		return [this.opts.d, this.opts.d, this.opts.h];
+	}
 	constructor(opts: CylinderOpts) {
 		super();
 		let r: number, d: number;
@@ -197,6 +204,9 @@ export function cylinder(opts: CylinderOpts): Geometry3D {
 class ImportedGeometry extends BaseGeometry3D {
 	// TODO resolve ~ and $HOME
 	path: string;
+	get size(): V3 {
+		throw new Error("Cannot return size of imported geometry!")
+	}
 	constructor(path: string) {
 		super();
 		this.path = path;
@@ -265,6 +275,9 @@ export function square(size: V2, opts?: SquareOpts): Geometry2D {
 export type CircleOpts = {d?:number, r?:number, fn?:number};
 export class Circle extends BaseGeometry2D implements Geometry2D {
 	params: CircleOpts & {d:number};
+	get size(): V2 {
+		return [this.params.d, this.params.d];
+	}
 	constructor(opts: CircleOpts) {
 		super();
 		let r: number, d: number;
@@ -302,6 +315,9 @@ export type LinearExtrudeOpts = {
 export class LinearExtrude extends ParentGeometry<V3> {
 	opts: LinearExtrudeOpts;
 	height: number;
+	// get size() {
+	// 	return [super.size[0], super.size[1], this.height];
+	// }
 	constructor(height: number, opts: LinearExtrudeOpts, children: Geometry2D|Geometry2D[]) {
 		// Seems like typescript should fail on this, but oh well.
 		super(children);
