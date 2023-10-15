@@ -472,6 +472,8 @@ export class Turtle implements turtle {
 
 interface UnitArcOpts {
 	steps?: number;
+	fn?: number;
+	$fn?: number;
 }
 
 // TODO add opts
@@ -483,7 +485,7 @@ interface UnitArcOpts {
 export function unitArc(degrees: number, opts?: UnitArcOpts): Path;
 export function unitArc(start: number, end: number, opts?: UnitArcOpts): Path;
 export function unitArc(a: number, b?: number|UnitArcOpts, c?: UnitArcOpts): Path {
-	let defaultOpts = { steps: 4 };
+	let defaultOpts = { steps: 8 };
 	let end_rads: number, start_rads: number;
 	let opts: UnitArcOpts & { steps: number };
 	if (typeof b == "number") {
@@ -498,14 +500,12 @@ export function unitArc(a: number, b?: number|UnitArcOpts, c?: UnitArcOpts): Pat
 		opts = { ... defaultOpts, ... b };
 	}
 
-	if (opts.steps == undefined) {
-		opts.steps = 4;
-	}
+	let steps = opts.$fn ?? opts.fn ?? opts.steps;
 
-	let points: V2[] = _.range(opts.steps + 1)
+	let points: V2[] = _.range(steps + 1)
 		.map(i => [
-			Math.cos(start_rads + end_rads * i / opts.steps),
-			Math.sin(start_rads + end_rads * i / opts.steps),
+			Math.cos(start_rads + end_rads * i / steps),
+			Math.sin(start_rads + end_rads * i / steps),
 		])
 	return [...points];
 }
@@ -525,13 +525,13 @@ export function strokePath(p: Path, opts?:StrokePathOpts): Geometry<V2 | V3> {
 	let strokeColor = opts?.strokeColor ?? opts?.color ?? "gold";
 	let pointColor = opts?.pointColor ?? opts?.color ?? "red";
 	let pointDiam = opts?.pointDiam ?? 2 * strokeWidth;
-	let drawPoints: boolean = !! (opts?.points || opts?.pointDiam || opts?.pointColor)
+	let drawPoints: boolean = !! (opts?.points ?? opts?.pointDiam ?? opts?.pointColor)
 	let close = !! opts?.close;
 
 	let points = close ? closePath(p) : p
 
 	let defaultStroke: (points: [V2, V2]) => Geometry<V2 | V3> = ([from, to]) => {
-		let rot = _angleFromTwoPoints(from, to);
+		let rot = getVectorAngle(from, to);
 		let dist = _distFromTwoPoints(from, to);
 		return cube([dist, strokeWidth, 1])
 			.translate([0, -strokeWidth / 2, -0.5])
@@ -777,6 +777,43 @@ export function vInverse(v: V2|V3): V2|V3 {
 	}
 }
 
+// For fluent style vector math
+export class VectorChain {
+	v: V2;
+	constructor(v:V2) {
+		this.v = v;
+	}
+	add(v:V2): VectorChain { return new VectorChain(vAdd(v, this.v)) ; }
+	mult(v:V2): VectorChain { return new VectorChain(vMult(v, this.v)) ; }
+	get(): V2 { return this.v; }
+}
+export function vectorChain(v:V2) { return new VectorChain(v); }
+
+// Multiplies two matrices
+export function matrixMultiply(matrix1: number[][], matrix2: number[][]) {
+  // Check if the matrices can be multiplied
+  if (matrix1[0].length !== matrix2.length) {
+    throw new Error('Matrix dimensions are not compatible for multiplication');
+  }
+
+  // Create the result matrix with appropriate dimensions
+  const result: number[][] = [];
+  for (let i = 0; i < matrix1.length; i++) {
+    result[i] = new Array(matrix2[0].length).fill(0);
+  }
+
+  // Perform matrix multiplication
+  for (let i = 0; i < matrix1.length; i++) {
+    for (let j = 0; j < matrix2[0].length; j++) {
+      for (let k = 0; k < matrix2.length; k++) {
+        result[i][j] += matrix1[i][k] * matrix2[k][j];
+      }
+    }
+  }
+
+  return result;
+}
+
 export function setZ(v: V2|V3, z: number): V3 {
 	return [v[0], v[1], z];
 }
@@ -797,6 +834,31 @@ export function getVectorLength(v: V2): number {
 	return Math.sqrt(Math.pow(v[1], 2) + Math.pow(v[0], 2));
 }
 
+// Returns the unit vector for a given angle (in degrees)
+export function getUnitVector(angle: number): V2 {
+	let angleInRads = angle / 180 * Math.PI;
+	return [Math.cos(angleInRads), Math.sin(angleInRads)];
+}
+
+/*
+ * Returns the number of degrees of the angle from the x-axis to the given vector.
+ * If one point is given, the vector is assumed to start from the origin.
+ * If two points are given, the vector starts at point a and ends at point b.
+ */
+export function getVectorAngle(start: V2, end: V2): number;
+export function getVectorAngle(v: V2): number;
+export function getVectorAngle(a: V2, b?: V2): number {
+	let start: V2, end: V2;
+	if (b == undefined) {
+		start = [0, 0], end = a;
+	} else {
+		start = a, end = b;
+	}
+	let delta = vDelta(start, end);
+	let a2 = Math.atan2(delta[1], delta[0]) * 180 / Math.PI;
+	return a2;
+}
+
 export function ensureGeometryList(g: Geometry3D|Geometry3D[]): Geometry3D[] {
 	return "getCode" in g ? [g] : g;
 }
@@ -804,6 +866,19 @@ export function ensureGeometryList(g: Geometry3D|Geometry3D[]): Geometry3D[] {
 export const sum = (a: Array<number>) => a.reduce((cum, v) => cum + v); // TODO probably don't keep this.
 
 // PATH UTILS
+
+// Given a point, rotates it N degrees around the origin counter-clockwise.
+export function rotatePointAroundOrigin(v: V2, degrees: number): V2 {
+	let theta = - degrees / 180 * Math.PI;
+	let r = matrixMultiply(
+		[v],
+		[[ Math.cos(theta), - Math.sin(theta) ],
+		 [ Math.sin(theta),   Math.cos(theta) ]
+		]
+	);
+
+	return r[0] as V2;
+}
 
 export function draw_at_points(points: Array<V2|V3>, children: Geometry<any>|Geometry<any>[]): Geometry<V2|V3> {
 	return union(points.map(p => translate(p, children)));
