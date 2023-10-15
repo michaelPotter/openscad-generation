@@ -470,28 +470,43 @@ export class Turtle implements turtle {
 
 }
 
+interface UnitArcOpts {
+	steps?: number;
+}
+
 // TODO add opts
 /*
  * Returns a path that describes an arc on the unit circle.
  * Can pass both a start and end angle (in degrees), or just an end angle and
- * the arc will bestarted from the positive x axis.
+ * the arc will be started from the positive x axis.
  */
-export function unitArc(degrees: number): Path;
-export function unitArc(start: number, end: number): Path;
-export function unitArc(a: number, b?: number): Path {
-	let steps = 4;
+export function unitArc(degrees: number, opts?: UnitArcOpts): Path;
+export function unitArc(start: number, end: number, opts?: UnitArcOpts): Path;
+export function unitArc(a: number, b?: number|UnitArcOpts, c?: UnitArcOpts): Path {
+	let defaultOpts = { steps: 4 };
 	let end_rads: number, start_rads: number;
-	if (b == undefined) {
-		start_rads = 0;
-		end_rads = a / 180 * Math.PI;
-	} else {
+	let opts: UnitArcOpts & { steps: number };
+	if (typeof b == "number") {
 		let start = a;
 		let end = b;
 		start_rads = start / 180 * Math.PI;
 		end_rads = (end - start) / 180 * Math.PI;
+		opts = { ... defaultOpts, ... c };
+	} else {
+		start_rads = 0;
+		end_rads = a / 180 * Math.PI;
+		opts = { ... defaultOpts, ... b };
 	}
-	let points: V2[] = _.range(steps + 1)
-		.map(i => [Math.cos(start_rads + end_rads * i / steps), Math.sin(start_rads + end_rads * i / steps)])
+
+	if (opts.steps == undefined) {
+		opts.steps = 4;
+	}
+
+	let points: V2[] = _.range(opts.steps + 1)
+		.map(i => [
+			Math.cos(start_rads + end_rads * i / opts.steps),
+			Math.sin(start_rads + end_rads * i / opts.steps),
+		])
 	return [...points];
 }
 
@@ -829,6 +844,7 @@ function _distFromTwoPoints(a: V2, b: V2): number {
 }
 
 // Given a list of points, map each point to a "thruple" containing the previous, current and next point. Wraps around to to the end/beginning of the list for first/last points.
+// TODO replace with chunkChain<3> when implemented
 function getPathThruples<T>(a: Array<T>): Array<[T, T, T]> {
 	let r: Array<[T, T, T]> = [];
 	if (a.length < 3) {
