@@ -100,7 +100,7 @@ abstract class ParentGeometry<G extends V2|V3> extends BaseGeometry<G> {
 	}
 }
 
-/*
+/**
  * A helper class for defining custom complex geometry.
  * The user can extend this class, and as long as they define geometry(),
  * they can have an object that can be treated like regular geometry with various
@@ -401,9 +401,13 @@ export class Turtle implements turtle {
 		x: 0,
 		y: 0,
 	};
+	direction: number = 90;
 	pending_operation: null|{
 		chamfer?: number,
 	} = null;
+
+	private get penAsV(): V2 { return [this.pen.x, this.pen.y]; }
+
 	constructor(startingPoint: V2 = [0,0]) {
 		this.path = [startingPoint];
 		this.pen.x = startingPoint[0];
@@ -419,6 +423,7 @@ export class Turtle implements turtle {
 	// Moves the turtle in the positive Y direction
 	north(n:number) {
 		this.pen.y += n;
+		this.direction = 90;
 		this.stepTurtle();
 		return this;
 	}
@@ -426,18 +431,40 @@ export class Turtle implements turtle {
 	south(n:number) {
 		this.pen.y -= n;
 		this.stepTurtle();
+		this.direction = 270;
 		return this;
 	}
 	// Moves the turtle in the positive X direction
 	east(n:number) {
 		this.pen.x += n;
 		this.stepTurtle();
+		this.direction = 0;
 		return this;
 	}
 	// Moves the turtle in the negative X direction
 	west(n:number) {
 		this.pen.x -= n;
 		this.stepTurtle();
+		this.direction = 180;
+		return this;
+	}
+	turn(n:number) {
+		this.direction += n;
+		return this;
+	}
+	turnLeft(n:number) {
+		this.direction += n;
+		return this;
+	}
+	turnRight(n:number) {
+		this.direction -= n;
+		return this;
+	}
+	walk(n:number) {
+		let newPen = vAdd(vScale(getUnitVector(this.direction), n), this.penAsV);
+		this.pen.x = newPen[0]
+		this.pen.y = newPen[1]
+		this.path.push(newPen)
 		return this;
 	}
 	chamfer(n:number) {
@@ -767,6 +794,28 @@ export function vMult(v1: V2|V3, v2?: V2|V3): V2|V3|((v:V2|V3)=>V3)|(<T extends 
 	}
 }
 
+export function vScale(l:number, v: V3): V3;
+export function vScale(l:number, v: V2): V2;
+export function vScale(v: V3, l:number): V3;
+export function vScale(v: V2, l:number): V2;
+export function vScale(a: V2|V3|number, b:V2|V3|number): V2|V3 {
+	let v: V2|V3;
+	let l: number;
+	if (typeof a == "number") {
+		l = a;
+		v = b as V2|V3;
+	} else {
+		l = b as number;
+		v = a as V2|V3;
+	}
+
+	if (v.length == 2) {
+		return [v[0] * l, v[1] * l];
+	} else {
+		return [v[0] * l, v[1] * l, v[2] * l];
+	}
+}
+
 export function vInverse(v: V2): V2;
 export function vInverse(v: V3): V3;
 export function vInverse(v: V2|V3): V2|V3 {
@@ -818,29 +867,37 @@ export function setZ(v: V2|V3, z: number): V3 {
 	return [v[0], v[1], z];
 }
 
-// Returns a vector normal to the given vector.
+/*
+ * Returns a vector normal to the given vector.
+ */
 export function getNormalVector(v: V2): V2 {
 	return [v[1], -v[0]];
 }
 
-// Returns a new vector pointing in the same direction, but with the given length.
+/*
+ * Returns a new vector pointing in the same direction, but with the given length.
+ */
 export function setVectorLength(v: V2, l: number): V2 {
 	let ratio = l / getVectorLength(v);
 	return [v[0] * ratio, v[1] * ratio];
 }
 
-// Returns the length of the given vector (pythagorean theorem)
+/*
+ * Returns the length of the given vector (pythagorean theorem)
+ */
 export function getVectorLength(v: V2): number {
 	return Math.sqrt(Math.pow(v[1], 2) + Math.pow(v[0], 2));
 }
 
-// Returns the unit vector for a given angle (in degrees)
+/**
+ * Returns the unit vector for a given angle (in degrees)
+ */
 export function getUnitVector(angle: number): V2 {
 	let angleInRads = angle / 180 * Math.PI;
 	return [Math.cos(angleInRads), Math.sin(angleInRads)];
 }
 
-/*
+/**
  * Returns the number of degrees of the angle from the x-axis to the given vector.
  * If one point is given, the vector is assumed to start from the origin.
  * If two points are given, the vector starts at point a and ends at point b.
@@ -867,7 +924,9 @@ export const sum = (a: Array<number>) => a.reduce((cum, v) => cum + v); // TODO 
 
 // PATH UTILS
 
-// Given a point, rotates it N degrees around the origin counter-clockwise.
+/*
+ * Given a point, rotates it N degrees around the origin counter-clockwise.
+ */
 export function rotatePointAroundOrigin(v: V2, degrees: number): V2 {
 	let theta = - degrees / 180 * Math.PI;
 	let r = matrixMultiply(
