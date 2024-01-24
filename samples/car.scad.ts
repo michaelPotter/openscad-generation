@@ -2,6 +2,7 @@ import * as scad from '../src/scad'
 import {
 	cylinder,
 	text,
+	code,
 	union,
 	scale,
 	cube,
@@ -19,8 +20,8 @@ function car() {
 	let axle = cylinder({h:track,r:2,center:true}).rotate([90, 0, 0]);
 
 	return union([
-		text("$fa = 1;"),
-		text("$fs = 0.4;"),
+		code("$fa = 1;"),
+		code("$fs = 0.4;"),
 		scale([1.2, 1, 1], [
 			comment("Car body base"),
 			cube([60,20,base_height], {center:true}),
