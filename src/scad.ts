@@ -2,50 +2,26 @@
 
 import _ from 'underscore';
 
-export type V3 = [number, number, number];
-export type V2 = [number, number];
-export type Path = V2[];
+import {
+	OpenSCADCode,
+	V2,
+	V3,
+	Path,
+	vectorTransform,
+	booleanTransform,
+	Geometry
+} from './base';
 
-type vectorTransform<G extends V2|V3> = (v: V2|V3) => Geometry<G>
-type booleanTransform<G extends V2|V3> = (...g:Geometry<G>[]|Geometry<G>[][]) => Geometry<G>
-
-export interface OpenSCADCode {
-	getCode: () => string[];
-}
-
-export interface Geometry<G extends V2|V3> extends OpenSCADCode {
-	getSize: () => V3;
-
-	translate: vectorTransform<G>;
-	rotate:    vectorTransform<G>;
-	mirror:    vectorTransform<G>;
-	scale:     vectorTransform<G>;
-
-	union:        booleanTransform<G>;
-	difference:   booleanTransform<G>;
-	intersection: booleanTransform<G>;
-	hull:         booleanTransform<G>;
-
-	highlight : () => Geometry<G>;
-	hash      : () => Geometry<G>; // Alias for highlight
-	color     : (c: string) => Geometry<G>;
-
-	up    : (n: number) => Geometry<G>;
-	down  : (n: number) => Geometry<G>;
-	left  : (n: number) => Geometry<G>;
-	right : (n: number) => Geometry<G>;
-	fwd   : (n: number) => Geometry<G>;
-	back  : (n: number) => Geometry<G>;
-
-	serialize: () => string;
-}
+export * from './base';
 
 export interface Geometry2D extends Geometry<V2> {
 	linear_extrude : (n: number, o?:LinearExtrudeOpts) => Geometry<V3>;
 	linearExtrude : (n: number, o?:LinearExtrudeOpts) => Geometry<V3>;
 }
+
 export interface Geometry3D extends Geometry<V2> {
 }
+
 
 export abstract class BaseGeometry<G extends V2|V3> implements Geometry<G> {
 	abstract getCode(): string[];
