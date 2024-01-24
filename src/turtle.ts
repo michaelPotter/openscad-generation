@@ -2,11 +2,7 @@
 
 import {
 	V2,
-	V3,
 	Path,
-	vectorTransform,
-	booleanTransform,
-	Geometry
 } from './base';
 
 import {
@@ -126,6 +122,9 @@ export class Turtle implements turtle {
 		}
 	}
 
+	/**
+	 * Return the path walked by this turtle.
+	 */
 	getPath(): Path {
 		return this.path;
 	}
