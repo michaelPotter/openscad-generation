@@ -10,7 +10,7 @@ import {
 	vectorTransform,
 	booleanTransform,
 	Geometry
-} from './base';
+} from './BaseApi';
 
 import {
 	getNormalVector,
@@ -37,7 +37,7 @@ import {
 	chamferPoints,
 } from './PathUtils';
 
-export * from './base';
+export * from './BaseApi';
 export * from './vectorMath';
 export * from './turtle';
 
