@@ -31,15 +31,15 @@ import {
 	vInverse,
 	vMult,
 	vScale,
-} from './vectorMath';
+} from './VectorMath';
 
 import {
 	chamferPoints,
 } from './PathUtils';
 
 export * from './BaseApi';
-export * from './vectorMath';
-export * from './turtle';
+export * from './VectorMath';
+export * from './Turtle';
 
 export interface Geometry2D extends Geometry<V2> {
 	linear_extrude : (n: number, o?:LinearExtrudeOpts) => Geometry<V3>;

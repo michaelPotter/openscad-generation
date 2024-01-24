@@ -1,6 +1,6 @@
 'use strict';
 
-import { V2 } from './base';
+import { V2 } from './BaseApi';
 
 /**
  * Given 3 points, chamfer the middle point and return two points that would replace it.
