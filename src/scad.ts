@@ -368,10 +368,16 @@ export function polygon(points: V2[]) {
 //                               PATHS                                //
 ////////////////////////////////////////////////////////////////////////
 
+/**
+ * @deprecated
+ */
 export type PathAnnotation = {
 	chamfer?: number;
 }
 
+/**
+ * @deprecated
+ */
 export type AnnotatedPath = Array<[ number, number, PathAnnotation ]>;
 export function tweakPath(path: AnnotatedPath): V2[] {
 	const aToP: (a: Parameters<typeof tweakPath>[0][0]) => V2 = (a) => [a[0], a[1]];
@@ -386,8 +392,6 @@ export function tweakPath(path: AnnotatedPath): V2[] {
 		}
 	});
 }
-
-
 
 interface UnitArcOpts {
 	steps?: number;
